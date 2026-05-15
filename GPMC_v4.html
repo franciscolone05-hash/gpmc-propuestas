@@ -1689,12 +1689,13 @@ function genPDF() {
         '<th style="text-align:right;width:85px">Subtotal</th>'+
       '</tr></thead>'+
       '<tbody>'+itemRows+'</tbody>'+
-    '</table>'+
+    '</table>';
 
-      var ivaRow = t.ivaChecked ?
+  var ivaRow = t.ivaChecked ?
     '<div class="pdf-total-row"><div class="tl"><span class="name">Subtotal</span><span class="amt">$'+sub.toFixed(2)+'</span></div></div>'+
     '<div class="pdf-total-row"><div class="tl"><span class="name">IVA (13%)</span><span class="amt">$'+t.iva.toFixed(2)+'</span></div></div>' : '';
 
+  document.getElementById('pdf-inner').innerHTML +=
     '<div class="pdf-totals">'+
       ivaRow+
       '<div class="pdf-total-row pdf-grand"><div class="tl"><span class="name">TOTAL PROPUESTA</span><span class="amt">$'+tot.toFixed(2)+'</span></div></div>'+
