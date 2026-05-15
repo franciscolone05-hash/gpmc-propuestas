@@ -233,18 +233,21 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 .mcv-content .note{font-size:12px;color:var(--gray1);margin-top:2px}
 
 /* ── CHECKLIST ─────────────────────────────────────────────────────────────── */
-.chk-grid{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.chk-grid{display:flex;flex-direction:column;gap:4px;margin-bottom:16px}
 .chk-item{
-  display:flex;align-items:flex-start;gap:10px;
-  padding:10px 12px;border-radius:7px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;
+  padding:8px 12px;border-radius:6px;cursor:pointer;
   border:1px solid var(--border);background:#fafaf9;
-  transition:all .15s;font-size:13px;
+  transition:all .15s;font-size:12.5px;line-height:1.4;
 }
-.chk-item:hover{border-color:var(--gray3);background:#fff}
+.chk-item:hover{border-color:var(--red);background:#fff}
 .chk-item.checked{
   background:var(--okLt);border-color:rgba(27,107,58,.3);color:var(--ok);
 }
-.chk-item input[type=checkbox]{margin-top:1px;accent-color:var(--ok);flex-shrink:0}
+.chk-item input[type=checkbox]{
+  flex-shrink:0;width:15px;height:15px;
+  accent-color:var(--ok);cursor:pointer;margin:0;
+}
 
 /* ── BBDD TABLE ─────────────────────────────────────────────────────────────── */
 .dtbl{width:100%;border-collapse:collapse;font-size:13px}
@@ -538,35 +541,23 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 
 /* ── PRINT ── */
 @media print{
-  @page{
-    margin:0;
-    size:letter;
-  }
-  /* Elimina encabezado y pie de página del navegador */
-  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{margin:0;size:letter}
+  html,body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .sidebar,.topbar,.pdf-toolbar,.btn-row,.pdf-actions,
   .content>*:not(.section){display:none!important}
   .section#section-preview{display:block!important}
   .content{padding:0!important;overflow:visible!important;margin:0!important}
   .pdf-wrap{background:none!important;padding:0!important;border-radius:0!important;margin:0!important}
   .pdf-page{
-    width:100vw!important;
-    min-height:100vh!important;
+    width:100%!important;
     box-shadow:none!important;
     border-radius:0!important;
     margin:0!important;
-    page-break-after:always;
+    overflow:visible!important;
   }
   .pdf-page::before{display:none!important}
-  /* Logo marca de agua visible al imprimir */
-  .pdf-watermark{
-    opacity:0.07!important;
-    display:block!important;
-    -webkit-print-color-adjust:exact;
-    print-color-adjust:exact;
-  }
-  /* Footer visible al imprimir */
-  .pdf-footer{display:block!important}
+  .pdf-watermark{opacity:0.07!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .pdf-footer{page-break-inside:avoid!important;break-inside:avoid!important}
   .pdf-footer-services,.pdf-footer-contact{
     -webkit-print-color-adjust:exact!important;
     print-color-adjust:exact!important;
@@ -574,7 +565,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 }
 
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -1775,34 +1767,78 @@ function nuevaPropuesta() {
 
 // ── DESCARGAR PDF ─────────────────────────────────────────────────────────
 function descargarPDF() {
-  var code = document.getElementById('p-code').value || 'GPMC-propuesta';
-  var filename = code + '-V' + verN + '.pdf';
-  var el = document.getElementById('pdf-page');
-  var opt = {
-    margin:       [0.4, 0.4, 0.4, 0.4],
-    filename:     filename,
-    image:        { type:'jpeg', quality:0.98 },
-    html2canvas:  {
-      scale:2,
-      useCORS:true,
-      allowTaint:true,
-      backgroundColor:'#ffffff',
-      logging:false,
-      windowWidth:816,
-    },
-    jsPDF: { unit:'in', format:'letter', orientation:'portrait' },
-    pagebreak: { mode:'css', before:'.pdf-page-break', avoid:'.pdf-hdr,.pdf-footer' },
-  };
+  var code    = document.getElementById('p-code').value || 'GPMC-propuesta';
+  var filename= code + '-V' + verN + '.pdf';
+  var el      = document.getElementById('pdf-page');
+
   toast('⏳ Generando PDF...','');
-  html2pdf().set(opt).from(el).save().then(function() {
+
+  // Temporarily make element visible and sized for capture
+  var origStyle = el.style.cssText;
+  el.style.width  = '816px';
+  el.style.margin = '0';
+
+  html2canvas(el, {
+    scale:          2,
+    useCORS:        true,
+    allowTaint:     true,
+    backgroundColor:'#ffffff',
+    logging:        false,
+    width:          816,
+    windowWidth:    816,
+  }).then(function(canvas) {
+    el.style.cssText = origStyle;
+
+    var imgData  = canvas.toDataURL('image/jpeg', 0.95);
+    var pdf      = new window.jspdf.jsPDF({
+      orientation: 'portrait',
+      unit:        'pt',
+      format:      'letter',
+    });
+
+    var pageW  = pdf.internal.pageSize.getWidth();
+    var pageH  = pdf.internal.pageSize.getHeight();
+    var imgW   = pageW;
+    var imgH   = canvas.height * pageW / canvas.width;
+
+    if(imgH <= pageH) {
+      // Fits in one page
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+    } else {
+      // Multi-page: slice canvas into page-sized chunks
+      var pageCanvas  = document.createElement('canvas');
+      var pageCtx     = pageCanvas.getContext('2d');
+      var scale       = canvas.width / pageW;
+      var pageHpx     = Math.floor(pageH * scale);
+
+      pageCanvas.width  = canvas.width;
+      pageCanvas.height = pageHpx;
+
+      var y = 0;
+      var first = true;
+      while(y < canvas.height) {
+        if(!first) pdf.addPage();
+        first = false;
+        pageCtx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
+        pageCtx.fillStyle = '#ffffff';
+        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        pageCtx.drawImage(canvas, 0, -y);
+        var sliceData = pageCanvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(sliceData, 'JPEG', 0, 0, pageW, pageH);
+        y += pageHpx;
+      }
+    }
+
+    pdf.save(filename);
     toast('✓ PDF descargado: '+filename,'ok');
   }).catch(function(e) {
+    el.style.cssText = origStyle;
     toast('⚠ Error al generar PDF','warn');
     console.error(e);
   });
 }
 
-// ── TOAST ─────────────────────────────────────────────────────────────────
+// ── TOAST// ── TOAST ─────────────────────────────────────────────────────────────────
 function toast(msg,type) {
   var el=document.getElementById('toast-el');
   el.textContent=msg;
