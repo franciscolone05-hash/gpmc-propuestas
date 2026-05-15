@@ -420,8 +420,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
 }
 .pdf-hdr-left{display:flex;align-items:center;gap:14px}
 .pdf-hdr-logo{height:38px;width:auto;object-fit:contain;flex-shrink:0;max-width:120px}
-.pdf-hdr-name{font-size:13.5px;font-weight:800;color:var(--dark);letter-spacing:.2px;line-height:1.2}
-.pdf-hdr-tagline{font-size:9px;color:var(--gray1);margin-top:3px;letter-spacing:.2px}
+.pdf-hdr-name{font-size:14px;font-weight:500;color:var(--dark);letter-spacing:.2px;line-height:1.2}
+.pdf-hdr-tagline{display:none}
 .pdf-hdr-right{text-align:right}
 .pdf-hdr-code{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--red);letter-spacing:.5px}
 .pdf-hdr-doc{
@@ -723,19 +723,14 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
             </tr></thead>
             <tbody id="items-body"></tbody>
             <tfoot>
-              <tr class="tfoot-row">
-                <td colspan="4" style="color:var(--gray2);font-size:12px">Subtotal costos directos</td>
+              <tr class="tfoot-row" id="tr-sub" style="display:none">
+                <td colspan="4" style="color:var(--gray2);font-size:12px">Subtotal</td>
                 <td id="td-sub" style="font-family:var(--mono);font-weight:700">$0.00</td>
                 <td colspan="2"></td>
               </tr>
-              <tr class="tfoot-row">
-                <td colspan="4" style="color:var(--gray2);font-size:12px">Costos indirectos (15%)</td>
-                <td id="td-ind" style="font-family:var(--mono);color:var(--gray1)">$0.00</td>
-                <td colspan="2"></td>
-              </tr>
-              <tr class="tfoot-row">
-                <td colspan="4" style="color:var(--gray2);font-size:12px">Utilidad (20%)</td>
-                <td id="td-util" style="font-family:var(--mono);color:var(--gray1)">$0.00</td>
+              <tr class="tfoot-row" id="tr-iva" style="display:none">
+                <td colspan="4" style="color:var(--gray2);font-size:12px">IVA (13%)</td>
+                <td id="td-iva" style="font-family:var(--mono);color:var(--gray1)">$0.00</td>
                 <td colspan="2"></td>
               </tr>
               <tr class="grand-total">
@@ -753,6 +748,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div>
             <div class="field-label">Forma de pago</div>
             <select id="p-pago">
+              <option>A convenir</option>
               <option>Anticipos por avance</option>
               <option>50% anticipo / 50% entrega</option>
               <option>Al contado</option>
@@ -770,6 +766,13 @@ textarea{resize:vertical;min-height:72px;line-height:1.5}
           <div>
             <div class="field-label">Inicio estimado</div>
             <input type="date" id="p-inicio">
+          </div>
+          <div>
+            <div class="field-label">IVA</div>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:#fafaf9;font-size:13px">
+              <input type="checkbox" id="p-iva" onchange="calcTotals()" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer">
+              Incluir IVA (13%)
+            </label>
           </div>
           <div class="field-full">
             <div class="field-label">Exclusiones</div>
@@ -1413,16 +1416,24 @@ function upd(i,f,v) {
 function addItem() { items.push({desc:'Nuevo ítem',unit:'u',qty:1,cost:0,cat:'Eléctrico'}); renderItems(); }
 function removeItem(i) { items.splice(i,1); renderItems(); }
 function calcTotals() {
-  var sub=items.reduce(function(a,b){return a+b.qty*b.cost;},0);
-  var ind=sub*.15, ut=sub*.20, tot=sub+ind+ut;
-  document.getElementById('td-sub').textContent='$'+sub.toFixed(2);
-  document.getElementById('td-ind').textContent='$'+ind.toFixed(2);
-  document.getElementById('td-util').textContent='$'+ut.toFixed(2);
+  var sub = items.reduce(function(a,b){return a+b.qty*b.cost;},0);
+  var ivaChecked = document.getElementById('p-iva') && document.getElementById('p-iva').checked;
+  var iva = ivaChecked ? sub*0.13 : 0;
+  var tot = sub + iva;
+  // Show/hide subtotal and IVA rows
+  var trSub = document.getElementById('tr-sub');
+  var trIva = document.getElementById('tr-iva');
+  if(trSub) trSub.style.display = ivaChecked ? '' : 'none';
+  if(trIva) trIva.style.display = ivaChecked ? '' : 'none';
+  if(document.getElementById('td-sub')) document.getElementById('td-sub').textContent='$'+sub.toFixed(2);
+  if(document.getElementById('td-iva')) document.getElementById('td-iva').textContent='$'+iva.toFixed(2);
   document.getElementById('td-total').textContent='$'+tot.toFixed(2);
 }
 function getTotals() {
-  var sub=items.reduce(function(a,b){return a+b.qty*b.cost;},0);
-  return {sub:sub, ind:sub*.15, ut:sub*.20, tot:sub*1.35};
+  var sub = items.reduce(function(a,b){return a+b.qty*b.cost;},0);
+  var ivaChecked = document.getElementById('p-iva') && document.getElementById('p-iva').checked;
+  var iva = ivaChecked ? sub*0.13 : 0;
+  return {sub:sub, iva:iva, tot:sub+iva, ivaChecked:ivaChecked};
 }
 
 // ── MCV ───────────────────────────────────────────────────────────────────
@@ -1603,7 +1614,7 @@ function genPDF() {
       contacto=v('p-contacto'), tipo=sel('p-tipo'), alcance=v('p-alcance'),
       ubic=v('p-ubic'), pago=sel('p-pago'), validez=sel('p-validez'),
       excl=v('p-excl'), condiciones=v('p-condiciones'), inicio=v('p-inicio');
-  var t=getTotals(), sub=t.sub, ind=t.ind, ut=t.ut, tot=t.tot;
+  var t=getTotals(), sub=t.sub, tot=t.tot;
 
   var itemRows='';
   items.forEach(function(it){
@@ -1680,10 +1691,12 @@ function genPDF() {
       '<tbody>'+itemRows+'</tbody>'+
     '</table>'+
 
+      var ivaRow = t.ivaChecked ?
+    '<div class="pdf-total-row"><div class="tl"><span class="name">Subtotal</span><span class="amt">$'+sub.toFixed(2)+'</span></div></div>'+
+    '<div class="pdf-total-row"><div class="tl"><span class="name">IVA (13%)</span><span class="amt">$'+t.iva.toFixed(2)+'</span></div></div>' : '';
+
     '<div class="pdf-totals">'+
-      '<div class="pdf-total-row"><div class="tl"><span class="name">Subtotal costos directos</span><span class="amt">$'+sub.toFixed(2)+'</span></div></div>'+
-      '<div class="pdf-total-row"><div class="tl"><span class="name">Costos indirectos (15%)</span><span class="amt">$'+ind.toFixed(2)+'</span></div></div>'+
-      '<div class="pdf-total-row"><div class="tl"><span class="name">Utilidad (20%)</span><span class="amt">$'+ut.toFixed(2)+'</span></div></div>'+
+      ivaRow+
       '<div class="pdf-total-row pdf-grand"><div class="tl"><span class="name">TOTAL PROPUESTA</span><span class="amt">$'+tot.toFixed(2)+'</span></div></div>'+
     '</div>'+
 
@@ -1786,47 +1799,48 @@ function descargarPDF() {
     logging:        false,
     width:          816,
     windowWidth:    816,
+    height:         el.scrollHeight,
   }).then(function(canvas) {
     el.style.cssText = origStyle;
 
-    var imgData  = canvas.toDataURL('image/jpeg', 0.95);
-    var pdf      = new window.jspdf.jsPDF({
-      orientation: 'portrait',
-      unit:        'pt',
-      format:      'letter',
-    });
+    var pdf   = new window.jspdf.jsPDF({orientation:'portrait',unit:'pt',format:'letter'});
+    var pageW = pdf.internal.pageSize.getWidth();
+    var pageH = pdf.internal.pageSize.getHeight();
+    var scale = canvas.width / pageW;
+    var pageHpx = Math.floor(pageH * scale);
 
-    var pageW  = pdf.internal.pageSize.getWidth();
-    var pageH  = pdf.internal.pageSize.getHeight();
-    var imgW   = pageW;
-    var imgH   = canvas.height * pageW / canvas.width;
-
-    if(imgH <= pageH) {
-      // Fits in one page
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
-    } else {
-      // Multi-page: slice canvas into page-sized chunks
-      var pageCanvas  = document.createElement('canvas');
-      var pageCtx     = pageCanvas.getContext('2d');
-      var scale       = canvas.width / pageW;
-      var pageHpx     = Math.floor(pageH * scale);
-
-      pageCanvas.width  = canvas.width;
-      pageCanvas.height = pageHpx;
-
-      var y = 0;
-      var first = true;
-      while(y < canvas.height) {
-        if(!first) pdf.addPage();
-        first = false;
-        pageCtx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
-        pageCtx.fillStyle = '#ffffff';
-        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        pageCtx.drawImage(canvas, 0, -y);
-        var sliceData = pageCanvas.toDataURL('image/jpeg', 0.95);
-        pdf.addImage(sliceData, 'JPEG', 0, 0, pageW, pageH);
-        y += pageHpx;
+    // Trim trailing blank space: find last non-white row
+    var ctx = canvas.getContext('2d');
+    var rawH = canvas.height;
+    var lastContentRow = rawH;
+    outer: for(var row = rawH-1; row >= 0; row--) {
+      var d = ctx.getImageData(0, row, canvas.width, 1).data;
+      for(var px = 0; px < d.length; px += 4) {
+        if(d[px] < 250 || d[px+1] < 250 || d[px+2] < 250) {
+          lastContentRow = row + 1;
+          break outer;
+        }
       }
+    }
+    // Add small padding below last content
+    var contentH = Math.min(lastContentRow + 40, rawH);
+
+    var pageCanvas = document.createElement('canvas');
+    var pageCtx    = pageCanvas.getContext('2d');
+    pageCanvas.width  = canvas.width;
+    pageCanvas.height = pageHpx;
+
+    var y = 0;
+    var first = true;
+    while(y < contentH) {
+      if(!first) pdf.addPage();
+      first = false;
+      pageCtx.clearRect(0,0,pageCanvas.width,pageCanvas.height);
+      pageCtx.fillStyle='#ffffff';
+      pageCtx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
+      pageCtx.drawImage(canvas, 0, -y);
+      pdf.addImage(pageCanvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,pageW,pageH);
+      y += pageHpx;
     }
 
     pdf.save(filename);
