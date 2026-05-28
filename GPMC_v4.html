@@ -356,7 +356,8 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
         <div style="max-height:200px;overflow-y:auto;border:1px solid #3a3a3a;border-radius:var(--r)">
           <table style="width:100%;font-size:12px;border-collapse:collapse" id="paste-tbl"></table>
         </div>
-        <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="resetPaste()" style="margin-right:auto;color:#aaa;border-color:#555">🗑 Limpiar</button>
           <button class="btn btn-light btn-sm" onclick="pasteMode='add';applyPaste()">＋ Agregar a existentes</button>
           <button class="btn btn-red btn-sm" onclick="pasteMode='replace';applyPaste()">⟳ Reemplazar todos</button>
         </div>
@@ -955,7 +956,9 @@ function buildCatalogUI(q) {
       row.innerHTML=
         '<span class="cat-item-desc">'+esc(it.d)+'</span>'+
         '<span class="cat-item-price">'+fmtMoney(it.p)+'/'+esc(it.u)+'</span>'+
-        '<button class="cat-item-add" onclick="addFromCatalog('+JSON.stringify(it.d)+','+JSON.stringify(it.u)+','+it.p+')">+</button>';
+        '<button class="cat-item-add">+</button>';
+      var btn = row.querySelector('.cat-item-add');
+      (function(d,u,p){ btn.addEventListener('click', function(e){ e.stopPropagation(); addFromCatalog(d,u,p); }); })(it.d, it.u, it.p);
       itemsDiv.appendChild(row);
     });
     grp.appendChild(title);
@@ -972,7 +975,8 @@ function buildCatalogUI(q) {
 function addFromCatalog(desc, unit, price) {
   rows.push({type:'item', desc:desc, qty:'1', unit:unit, price:price});
   renderTable();
-  toast('✓ Ítem agregado','ok');
+  closeCatalog();
+  toast('✓ Ítem agregado a la tabla','ok');
 }
 
 // ═══════════════════════════════════════════════════
