@@ -471,6 +471,16 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
 
 <script>
 // ═══════════════════════════════════════════════════
+// GOOGLE SHEETS CONFIG
+// ═══════════════════════════════════════════════════
+const SHEETS_CONFIG = {
+  sheetId:     '1Q1kB7U0C3qNwZe6fIiJAm3JeDpmtU29H6DNLjSWoeoI',
+  clientEmail: 'gpmc-sheets@gpmc-propuestas.iam.gserviceaccount.com',
+  privateKey:  '-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC441Nfd2wrjSDX\naQaxohZw96DUaIl1aEfHkdHNiNMXzX4pKFrkZiqjfRXjvl6NXLte1384ycMM30mN\nATYgjPziB75B20/ZfZWAcvFylmNrlr/SCsynY05S9UqyP2cu5mhm7w4XJvRYiiqG\nQkgdgjjR0x0vCVy07dE/7PaJ9WNmFEJuNB9Kwy4K8SUeA88sT9Ml0KFCqcAvjHV/\n4EkFl6409XVizijAb1+h4FyIpzVE0CdFTB4BAzGcphltBf9Zj7I3dFT4NuVTbi5P\nX9q065kB4keYTdrsyoPbUjj8JBjLDznA3Ad1XIn7xVi93UTMvaknCx5ULZx3q3LK\nq5KkPfPFAgMBAAECggEAA8sRhJRQvpL/wROj928tz9sGFx2Jm8RMMWAV7RuDyImm\n2eV8pJIjs/omwbxVOHLA2wkHpeyzyQGSwtHAdcoBYoofS+lvObUtz6EWwDpYJ1au\n2vptk6NCBzSGTWJndaBKCjnuMNOT20uDDwFF9VRc4ecs19sfZmHjs2X4nUDQ2Cuv\ndm+azqdcdr0HMHenB5uIaBCeCa3d5yNaVjkA8gslaTkTs0VtUapzinlWycNwTxiN\ngBWDFx50DHSAPKjl06kLqBxXBl3PXv1M/yh2LGwLCRXQpcamyXVhVq9iNu+KFfo1\n6ytE0P61YoAITl8obESI8J47ZlwMjhYfNtIPlXB9SQKBgQDmbgljfbhkBRanXMOi\nsnOd1HpCcXIqy0LEBPxuDzLwNxf7Fr/Fnc8DRQKq553TRUxaQlHj8QaOM681nJ9F\nZfxvfsWGMiTJFD0ek0xpO0l5Ha3s4/27j61EdrA4TFVuABaGJnW2H6dDo1gb7Ulu\ng6MEE7lO1m8GclFqhp5L/Yq7bQKBgQDNZ429Uo4neKV/CnikT5zWFiLln3aWlK2v\nuGrkRFONSqzk9lbIeG0zZQ9WMFwcYwWVU8Pyg1NId4kz2A4JinBXppypq8/fIw9d\nS9Ctze+30SFReAMo6PldhrwCsERDR26zsINbArEX2YNwfj03IXZwPm1FeFwW6EyB\nNVrlO6tKuQKBgEJyJH7t98fPt9KW60r1DmXKqV6TfApfBmej0G6kL1oZaO7chnwj\nn1ggBD7n/xi2+OdmDFsgW3WR7coV2c+XMw2rjqW9u+HH1kAE1ZnaoLsuFcMjkz0M\nlzgQyYvSZygLGnOgj3zu77qPVY7oA668grtgPKVBLE69lECVhPwApoqZAoGAGfne\nkvK9x4AabdaFK0JmMyzZfPCNrr1eubo4ymVZq6Sl+M6uauvP45AEQIIdI/nh2uCd\nBy5UefWkBEpufAZl7q/DYDG6OB3W85WC7nf8uOJZtFPZEnNkFc/UNwLTny6JcXAB\nLKFKhBmd5bwRQceZkthSOVbfToZSJoT42cSSBQECgYB8caLMWol0PZa68hk5mQak\n/yUIGxXzjtz+krg9Z5WBVdWC7KNsnmpIJ6qoWGZJ2A0W7e680AjIPT60NeLgQ6m4\n0w6k9UPSr/1B/ZJvb8L6k/CvxkV4G2IfiwOjKu4DzWgpiIUecRn1tUwXid4zwMFJ\n6FhV2LdMM+elVnBW2ZO4dA==\n-----END PRIVATE KEY-----\n',
+  scopes:      'https://www.googleapis.com/auth/spreadsheets',
+};
+
+// ═══════════════════════════════════════════════════
 // GOOGLE SHEETS MODULE (embedded)
 // ═══════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════
