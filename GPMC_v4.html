@@ -1183,6 +1183,7 @@ var notes        = [];
 var propCode     = '';
 var propVersion  = 'V1';
 var propVersionN = 1;
+var _savedSheetRow = -1; // row in Sheets where current propCode is saved (-1 = not yet)
 var propBaseCode = '';    // GPMC-2026-001 without version
 var currentStep  = 1;
 var modalMode    = '';
@@ -1663,6 +1664,7 @@ function loadSelectedVersion() {
   try { notes = JSON.parse(r[9]||'[]'); } catch(e) { notes=[]; }
   cvAnswers = {};
 
+  _savedSheetRow = -1;
   closeVersionModal();
   clearForm();
   setFRIData(fri);
@@ -1704,6 +1706,7 @@ function createNewVersion() {
   try { notes = JSON.parse(r[9]||'[]'); } catch(e) { notes=[]; }
   cvAnswers = {};
 
+  _savedSheetRow = -1;
   closeVersionModal();
   clearForm();
   setFRIData(fri);
@@ -2185,16 +2188,26 @@ async function guardar() {
 
   try {
     if(window.location.protocol==='file:'){toast('⚠ Solo funciona en servidor web','warn');return;}
-    var existData = await sheetsRead('Historial', 'A2:A500');
-    var existCodes = (existData.values||[]).map(function(r){ return (r[0]||'').trim(); });
-    var existIdx = existCodes.indexOf(propCode.trim());
-    if(existIdx >= 0) {
-      var sheetRow = existIdx + 2;
-      await sheetsUpdate('Historial', 'A'+sheetRow+':R'+sheetRow, rowData);
+    if(_savedSheetRow > 0) {
+      // Already saved in this session — update same row directly
+      await sheetsUpdate('Historial', 'A'+_savedSheetRow+':R'+_savedSheetRow, rowData);
       toast('✓ '+propCode+' actualizada','ok');
     } else {
-      await sheetsAppend('Historial', rowData);
-      toast('✓ '+propCode+' guardada','ok');
+      // First save — check if exists in Sheets, then append or update
+      var existData = await sheetsRead('Historial', 'A2:A500');
+      var existCodes = (existData.values||[]).map(function(r){ return (r[0]||'').trim(); });
+      var existIdx = existCodes.indexOf(propCode.trim());
+      if(existIdx >= 0) {
+        _savedSheetRow = existIdx + 2;
+        await sheetsUpdate('Historial', 'A'+_savedSheetRow+':R'+_savedSheetRow, rowData);
+        toast('✓ '+propCode+' actualizada','ok');
+      } else {
+        // New row — append and record the row number
+        var countBefore = existCodes.filter(function(c){return c;}).length;
+        await sheetsAppend('Historial', rowData);
+        _savedSheetRow = countBefore + 2; // header + rows before + new row
+        toast('✓ '+propCode+' guardada','ok');
+      }
     }
     await guardarCliente(gv('f-cliente'),grv('tipo-cliente'),gv('f-contacto'),gv('f-ciudad'),gv('f-telefono'),gv('f-correo'));
   } catch(e) {
