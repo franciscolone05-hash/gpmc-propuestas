@@ -1100,6 +1100,20 @@ async function sheetsGet(sheetRange) {
   var resp = await fetch(url, {headers:{Authorization:'Bearer '+token}});
   return resp.json();
 }
+async function sheetsUpdate(sheet, range, values) {
+  var token = await getAccessToken();
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/'
+    + SHEETS_CONFIG.sheetId + '/values/'
+    + encodeURIComponent(sheet+'!'+range)
+    + '?valueInputOption=USER_ENTERED';
+  var resp = await fetch(url, {
+    method: 'PUT',
+    headers: {Authorization:'Bearer '+token, 'Content-Type':'application/json'},
+    body: JSON.stringify({values: values}),
+  });
+  return resp.json();
+}
+
 var sheetsRead = sheetsGet;
 
 async function sheetsAppend(sheet, values) {
@@ -2201,8 +2215,8 @@ async function guardar() {
     }
     await guardarCliente(gv('f-cliente'),grv('tipo-cliente'),gv('f-contacto'),gv('f-ciudad'),gv('f-telefono'),gv('f-correo'));
   } catch(e) {
-    toast('⚠ Error al guardar en Sheets','warn');
-    console.error(e);
+    toast('⚠ Error al guardar: '+e.message,'warn');
+    console.error('guardar error:', e);
   }
 }
 
