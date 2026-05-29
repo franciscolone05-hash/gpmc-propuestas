@@ -568,6 +568,9 @@ async function sheetsGet(range) {
   return resp.json();
 }
 
+// Alias for compatibility
+var sheetsRead = sheetsGet;
+
 async function sheetsAppend(range, values) {
   var token = await getAccessToken();
   var url = 'https://sheets.googleapis.com/v4/spreadsheets/'
@@ -683,11 +686,9 @@ function goHome() {
 
 function genCode() {
   var d = new Date();
-  var mm = String(d.getMonth()+1).padStart(2,'0');
-  var dd = String(d.getDate()).padStart(2,'0');
-  var yy = String(d.getFullYear()).slice(-2);
-  var seq = String(Math.floor(Math.random()*900)+100);
-  return 'GPMC:' + seq + ':' + dd + mm + yy;
+  var yyyy = d.getFullYear();
+  var seq = String(Math.floor(Math.random()*900)+100).padStart(3,'0');
+  return 'GPMC-' + yyyy + '-' + seq;
 }
 
 function clearForm() {
@@ -722,7 +723,7 @@ async function loadPropsForModal(filter) {
   var list = document.getElementById('prop-list');
   list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando desde Google Sheets…</div>';
   try {
-    var data = await sheetsRead('Historial', 'A2:H200');
+    var data = await sheetsRead('Historial', 'A2:O200');
     var all = (data.values || []).filter(function(r){ return r[0]; });
     if(filter === 'PENDIENTE') {
       all = all.filter(function(r){ return (r[7]||'').toUpperCase().includes('PENDIENTE'); });
