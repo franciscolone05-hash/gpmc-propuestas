@@ -418,13 +418,13 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
 <div id="modal-clientes" class="modal">
   <div class="mbox" style="max-width:580px">
     <div class="mhdr">
-      <h3>&#128101; Seleccionar cliente recurrente</h3>
+      <h3>Seleccionar cliente recurrente</h3>
       <button class="mbtn-close" onclick="closeClientesModal()">&times;</button>
     </div>
     <div class="mbody">
-      <input type="text" class="msearch" id="clientes-search" placeholder="Buscar por nombre, contacto o ciudad&hellip;" oninput="filterClientes()">
+      <input type="text" class="msearch" id="clientes-search" placeholder="Buscar por nombre, contacto o ciudad" oninput="filterClientes()">
       <div id="clientes-list" class="plist">
-        <div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando clientes&hellip;</div>
+        <div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando...</div>
       </div>
     </div>
     <div class="mfooter">
@@ -585,7 +585,7 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
             <div class="radio-group">
               <label><input type="radio" name="tipo-cliente" value="Nuevo" id="tc-nuevo"> Nuevo</label>
               <label><input type="radio" name="tipo-cliente" value="Recurrente" id="tc-rec" onclick="openClientesModal()"> Recurrente</label>
-              <button class="btn btn-ghost btn-xs" id="btn-buscar-cliente" onclick="openClientesModal()" style="display:none;margin-left:8px">&#128269; Buscar cliente</button>
+              <button class="btn btn-ghost btn-xs" id="btn-buscar-cliente" onclick="openClientesModal()" style="display:none;margin-left:8px">Buscar cliente</button>
             </div>
           </div>
           <div class="field">
@@ -1113,7 +1113,6 @@ async function sheetsUpdate(sheet, range, values) {
   });
   return resp.json();
 }
-
 var sheetsRead = sheetsGet;
 
 async function sheetsAppend(sheet, values) {
@@ -1263,9 +1262,7 @@ function goHome() {
 // ═══════════════════════════════════════════════════════
 async function genNewCode() {
   var year = new Date().getFullYear();
-  if(window.location.protocol === 'file:') {
-    return 'GPMC-' + year + '-' + String(Math.floor(Math.random()*900)+100).padStart(3,'0');
-  }
+  if(window.location.protocol==='file:') return 'GPMC-'+year+'-'+String(Math.floor(Math.random()*900)+100).padStart(3,'0');
   try {
     var data = await sheetsRead('Historial', 'A2:A500');
     var vals = (data.values || []).map(function(r){ return r[0]||''; });
@@ -1473,10 +1470,7 @@ function filterProps() {
 
 async function loadPropsForModal() {
   var list = document.getElementById('prop-list');
-  if(window.location.protocol === 'file:') {
-    list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#e67e22">⚠ Para usar esta función sube el archivo a un servidor web.</div>';
-    return;
-  }
+  if(window.location.protocol==='file:'){list.innerHTML='<div class="pmeta" style="padding:20px;text-align:center;color:#e67e22">⚠ Sube el archivo a servidor para conectar con Sheets.</div>';return;}
   list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando desde Google Sheets…</div>';
   try {
     var data = await sheetsRead('Historial', 'A2:O500');
@@ -1581,7 +1575,7 @@ function openVersionModal(base, versions) {
     var vcode  = r[0]||'';
     var ver    = vcode.match(/-V(\d+)$/) ? vcode.match(/-V(\d+)$/)[1] : (idx+1);
     var estado = r[7]||'En elaboración';
-    var fecha  = fmtFecha(r[17]); // column R = fecha guardado
+    var fecha  = fmtFecha(r[17]);
     var monto  = fmtMoney(parseFloat(r[5]||0));
     var stClass = estado.toLowerCase().includes('aprob') ? 'aprobada'
                 : estado.toLowerCase().includes('revisi') ? 'revision'
@@ -1596,7 +1590,7 @@ function openVersionModal(base, versions) {
           '<span class="ver-badge">V' + ver + '</span>' +
           '<span style="color:#fff;font-size:13px;font-family:monospace">' + esc(vcode) + '</span>' +
         '</div>' +
-        '<div class="ver-meta">Guardado: ' + esc(fmtFecha(r[17])) + ' · ' + monto + '</div>' +
+        '<div class="ver-meta">Guardado: ' + esc(fecha) + ' · ' + monto + '</div>' +
       '</div>' +
       '<span class="ver-status ' + stClass + '">' + esc(estado) + '</span>';
     item.addEventListener('click', function() {
@@ -1627,17 +1621,11 @@ function showVersionDetail(r, versions) {
     itemCount = items.filter(function(i){return i.type==='item';}).length;
   } catch(e) {}
 
-  var fechaGuardado = fmtFecha(r[17]);
-  var proyecto = (friData && friData.proyecto) ? friData.proyecto : (r[2]||'—');
-  var contacto = (friData && friData.contacto) ? friData.contacto : (r[3]||'—');
   content.innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">' +
       '<div><span style="color:#52EFFF;font-size:10px">Estado</span><br>' + esc(r[7]||'—') + '</div>' +
       '<div><span style="color:#52EFFF;font-size:10px">Total</span><br>' + fmtMoney(parseFloat(r[5]||0)) + '</div>' +
       '<div><span style="color:#52EFFF;font-size:10px">Ítems</span><br>' + itemCount + ' partidas</div>' +
-      '<div><span style="color:#52EFFF;font-size:10px">Proyecto</span><br>' + esc(proyecto) + '</div>' +
-      '<div><span style="color:#52EFFF;font-size:10px">Contacto</span><br>' + esc(contacto) + '</div>' +
-      '<div><span style="color:#52EFFF;font-size:10px">Guardado</span><br>' + esc(fechaGuardado) + '</div>' +
     '</div>';
 
   // Update button to show which version we'd create
@@ -2192,31 +2180,26 @@ async function guardar() {
     JSON.stringify(friData),           // O: FRI completo JSON
     cvStatus,                          // P: CV resultado
     gv('cv-validado-por'),             // Q: Validado por
-    (function(){ var d=new Date(); return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear(); })(), // R: Fecha guardado
+    new Date().toLocaleDateString('es-SV'), // R: Fecha guardado
   ]];
 
-  if(window.location.protocol === 'file:') {
-    toast('⚠ Guardado solo en memoria. Sube a servidor para guardar en Sheets.','warn');
-    return;
-  }
   try {
-    // Check if this exact propCode (with version) already exists → update, else append
-    var existingData = await sheetsRead('Historial', 'A2:A500');
-    var existingCodes = (existingData.values||[]).map(function(r){ return r[0]||''; });
-    var existingRowIdx = existingCodes.indexOf(propCode);
-    if(existingRowIdx >= 0) {
-      // Update existing row (existingRowIdx is 0-based in array, +2 for header+1-index)
-      var sheetRow = existingRowIdx + 2;
+    if(window.location.protocol==='file:'){toast('⚠ Solo funciona en servidor web','warn');return;}
+    var existData = await sheetsRead('Historial', 'A2:A500');
+    var existCodes = (existData.values||[]).map(function(r){ return (r[0]||'').trim(); });
+    var existIdx = existCodes.indexOf(propCode.trim());
+    if(existIdx >= 0) {
+      var sheetRow = existIdx + 2;
       await sheetsUpdate('Historial', 'A'+sheetRow+':R'+sheetRow, rowData);
-      toast('✓ '+propCode+' actualizada en Sheets','ok');
+      toast('✓ '+propCode+' actualizada','ok');
     } else {
       await sheetsAppend('Historial', rowData);
-      toast('✓ '+propCode+' guardada en Sheets','ok');
+      toast('✓ '+propCode+' guardada','ok');
     }
     await guardarCliente(gv('f-cliente'),grv('tipo-cliente'),gv('f-contacto'),gv('f-ciudad'),gv('f-telefono'),gv('f-correo'));
   } catch(e) {
-    toast('⚠ Error al guardar: '+e.message,'warn');
-    console.error('guardar error:', e);
+    toast('⚠ Error al guardar en Sheets','warn');
+    console.error(e);
   }
 }
 
@@ -2365,19 +2348,12 @@ function updatePreview() {
 // ═══════════════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════════════
-
 function fmtFecha(val) {
   if(!val) return '—';
-  var v = String(val).trim();
-  // If it's a numeric serial (Google Sheets date serial)
-  if(/^\d{4,6}$/.test(v)) {
-    // Sheets serial: days since Dec 30, 1899
-    var d = new Date((parseInt(v) - 25569) * 86400000);
-    return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
-  }
+  var v=String(val).trim();
+  if(/^\d{4,6}$/.test(v)){var d=new Date((parseInt(v)-25569)*86400000);return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();}
   return v;
 }
-
 function fmtMoney(n) {
   return '$'+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 }
@@ -2404,82 +2380,68 @@ function toast(msg,type) {
 // CLIENTES
 var _allClientes = [];
 function openClientesModal() {
-  var btn = document.getElementById('btn-buscar-cliente');
-  if(btn) btn.style.display = '';
-  var rec = document.getElementById('tc-rec');
-  if(rec) rec.checked = true;
-  if(window.location.protocol === 'file:') { toast('⚠ Conecta a Sheets para usar el catálogo de clientes','warn'); return; }
+  var btn=document.getElementById('btn-buscar-cliente'); if(btn) btn.style.display='';
+  var rec=document.getElementById('tc-rec'); if(rec) rec.checked=true;
+  if(window.location.protocol==='file:'){toast('⚠ Conecta a Sheets para el catálogo','warn');return;}
   document.getElementById('modal-clientes').classList.add('open');
   loadClientes();
 }
-function closeClientesModal() {
-  document.getElementById('modal-clientes').classList.remove('open');
-}
+function closeClientesModal(){ document.getElementById('modal-clientes').classList.remove('open'); }
 async function loadClientes() {
-  var list = document.getElementById('clientes-list');
-  list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando…</div>';
+  var list=document.getElementById('clientes-list');
+  list.innerHTML='<div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando…</div>';
   try {
-    var data = await sheetsRead('Clientes', 'A2:F200');
-    _allClientes = (data.values||[]).filter(function(r){ return r[0] && r[0].toString().trim() && r[0].toString().toLowerCase() !== 'nombre'; });
-    if(!_allClientes.length) { list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">No hay clientes registrados.</div>'; return; }
+    var data=await sheetsRead('Clientes','A1:F200');
+    var allRows=data.values||[];
+    _allClientes=allRows.slice(1).filter(function(r){return r[0]&&r[0].toString().trim();});
+    if(!_allClientes.length){list.innerHTML='<div class="pmeta" style="padding:20px;text-align:center;color:#888">No hay clientes aún.</div>';return;}
     renderClientesList(_allClientes);
-  } catch(e) { list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#c0392b">Error al conectar con Sheets.</div>'; }
+  } catch(e){list.innerHTML='<div class="pmeta" style="padding:20px;text-align:center;color:#c0392b">Error al conectar.</div>';console.log(e);}
 }
-function renderClientesList(clientes) {
-  var list = document.getElementById('clientes-list');
-  list.innerHTML = '';
-  clientes.forEach(function(r) {
-    var item = document.createElement('div');
-    item.className = 'pitem';
-    item.innerHTML = '<div><div class="pname">'+esc(r[0]||'')+'</div><div class="pmeta">'+esc(r[2]||'')+(r[3]?' · '+esc(r[3]):'')+(r[4]?' · '+esc(r[4]):'')+'</div></div><div style="font-size:11px;color:#aaa">'+esc(r[5]||'')+'</div>';
-    item.addEventListener('click', function(){ selectCliente(r); });
+function renderClientesList(clientes){
+  var list=document.getElementById('clientes-list'); list.innerHTML='';
+  clientes.forEach(function(r){
+    var item=document.createElement('div'); item.className='pitem';
+    item.innerHTML='<div><div class="pname">'+esc(r[0]||'')+'</div><div class="pmeta">'+esc(r[2]||'')+(r[3]?' · '+esc(r[3]):'')+(r[4]?' · '+esc(r[4]):'')+'</div></div><div style="font-size:11px;color:#aaa">'+esc(r[5]||'')+'</div>';
+    item.addEventListener('click',function(){selectCliente(r);});
     list.appendChild(item);
   });
 }
-function filterClientes() {
-  var q = (document.getElementById('clientes-search').value||'').toLowerCase().trim();
-  if(!q){ renderClientesList(_allClientes); return; }
-  renderClientesList(_allClientes.filter(function(r){ return (r[0]||'').toLowerCase().includes(q)||(r[2]||'').toLowerCase().includes(q)||(r[3]||'').toLowerCase().includes(q); }));
+function filterClientes(){
+  var q=(document.getElementById('clientes-search').value||'').toLowerCase().trim();
+  if(!q){renderClientesList(_allClientes);return;}
+  renderClientesList(_allClientes.filter(function(r){return (r[0]||'').toLowerCase().includes(q)||(r[2]||'').toLowerCase().includes(q)||(r[3]||'').toLowerCase().includes(q);}));
 }
-function selectCliente(r) {
-  sv('f-cliente',r[0]||''); sv('f-contacto',r[2]||''); sv('f-ciudad',r[3]||''); sv('f-telefono',r[4]||''); sv('f-correo',r[5]||'');
-  var rec = document.getElementById('tc-rec'); if(rec) rec.checked = true;
-  closeClientesModal(); toast('✓ Cliente cargado: '+(r[0]||''), 'ok');
+function selectCliente(r){
+  sv('f-cliente',r[0]||'');sv('f-contacto',r[2]||'');sv('f-ciudad',r[3]||'');sv('f-telefono',r[4]||'');sv('f-correo',r[5]||'');
+  var rec=document.getElementById('tc-rec');if(rec)rec.checked=true;
+  closeClientesModal();toast('✓ Cliente: '+(r[0]||''),'ok');
 }
-async function guardarCliente(nombre, tipoCliente, contacto, ciudad, telefono, correo) {
-  if(!nombre || tipoCliente !== 'Recurrente') return;
-  if(window.location.protocol === 'file:') return;
+async function guardarCliente(nombre,tipoCliente,contacto,ciudad,telefono,correo){
+  if(!nombre||window.location.protocol==='file:') return;
   try {
-    var data = await sheetsRead('Clientes', 'A1:A200');
-    var rows = data.values || [];
-    // Find existing row (skip header row 0)
-    var rowIdx = -1;
-    for(var i=1; i<rows.length; i++) {
-      if((rows[i][0]||'').toLowerCase().trim() === nombre.toLowerCase().trim()) {
-        rowIdx = i + 1; // 1-indexed sheet row
-        break;
-      }
+    var data=await sheetsRead('Clientes','A1:F200');
+    var allRows=data.values||[];
+    if(allRows.length===0){
+      await sheetsAppend('Clientes',[['Nombre','TipoCliente','Contacto','Ciudad','Telefono','Correo']]);
+      allRows=[['Nombre','TipoCliente','Contacto','Ciudad','Telefono','Correo']];
     }
-    var rowData = [[nombre, tipoCliente, contacto, ciudad, telefono, correo]];
-    if(rowIdx > 0) {
-      // Update existing row
-      await sheetsUpdate('Clientes', 'A'+rowIdx+':F'+rowIdx, rowData);
+    var rowIdx=-1;
+    for(var i=1;i<allRows.length;i++){
+      if((allRows[i][0]||'').toLowerCase().trim()===nombre.toLowerCase().trim()){rowIdx=i+1;break;}
+    }
+    var rowData2=[[nombre,tipoCliente,contacto,ciudad,telefono,correo]];
+    if(rowIdx>0){
+      await sheetsUpdate('Clientes','A'+rowIdx+':F'+rowIdx,rowData2);
     } else {
-      // Add new — ensure header exists first
-      if(rows.length === 0) {
-        await sheetsAppend('Clientes', [['Nombre','TipoCliente','Contacto','Ciudad','Telefono','Correo']]);
-      }
-      await sheetsAppend('Clientes', rowData);
+      await sheetsAppend('Clientes',rowData2);
     }
-  } catch(e) { console.log('guardarCliente error:', e); }
+  } catch(e){console.log('guardarCliente err:',e);}
 }
 
 window.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('input[name="tipo-cliente"]').forEach(function(radio){
-    radio.addEventListener('change', function(){
-      var btn = document.getElementById('btn-buscar-cliente');
-      if(btn) btn.style.display = this.value === 'Recurrente' ? '' : 'none';
-    });
+    radio.addEventListener('change',function(){var btn=document.getElementById('btn-buscar-cliente');if(btn)btn.style.display=this.value==='Recurrente'?'':'none';});
   });
   var btnNew   = document.getElementById('btn-new');
   var btnCont  = document.getElementById('btn-continue');
