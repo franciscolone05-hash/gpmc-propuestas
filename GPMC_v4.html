@@ -2180,9 +2180,20 @@ async function guardar() {
     return;
   }
   try {
-    await sheetsAppend('Historial', rowData);
+    // Check if this exact propCode (with version) already exists → update, else append
+    var existingData = await sheetsRead('Historial', 'A2:A500');
+    var existingCodes = (existingData.values||[]).map(function(r){ return r[0]||''; });
+    var existingRowIdx = existingCodes.indexOf(propCode);
+    if(existingRowIdx >= 0) {
+      // Update existing row (existingRowIdx is 0-based in array, +2 for header+1-index)
+      var sheetRow = existingRowIdx + 2;
+      await sheetsUpdate('Historial', 'A'+sheetRow+':R'+sheetRow, rowData);
+      toast('✓ '+propCode+' actualizada en Sheets','ok');
+    } else {
+      await sheetsAppend('Historial', rowData);
+      toast('✓ '+propCode+' guardada en Sheets','ok');
+    }
     await guardarCliente(gv('f-cliente'),grv('tipo-cliente'),gv('f-contacto'),gv('f-ciudad'),gv('f-telefono'),gv('f-correo'));
-    toast('✓ '+propCode+' guardada en Sheets','ok');
   } catch(e) {
     toast('⚠ Error al guardar en Sheets','warn');
     console.error(e);
@@ -2376,7 +2387,7 @@ async function loadClientes() {
   list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando…</div>';
   try {
     var data = await sheetsRead('Clientes', 'A2:F200');
-    _allClientes = (data.values||[]).filter(function(r){ return r[0] && r[0].toString().trim(); });
+    _allClientes = (data.values||[]).filter(function(r){ return r[0] && r[0].toString().trim() && r[0].toString().toLowerCase() !== 'nombre'; });
     if(!_allClientes.length) { list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">No hay clientes registrados.</div>'; return; }
     renderClientesList(_allClientes);
   } catch(e) { list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#c0392b">Error al conectar con Sheets.</div>'; }
@@ -2406,12 +2417,27 @@ async function guardarCliente(nombre, tipoCliente, contacto, ciudad, telefono, c
   if(!nombre || tipoCliente !== 'Recurrente') return;
   if(window.location.protocol === 'file:') return;
   try {
-    var data = await sheetsRead('Clientes', 'A2:A200');
-    var existing = (data.values||[]).map(function(r){ return (r[0]||'').toLowerCase().trim(); });
-    if(existing.includes(nombre.toLowerCase().trim())) {
-      var rowIdx = existing.indexOf(nombre.toLowerCase().trim()) + 2;
-      await sheetsUpdate('Clientes', 'A'+rowIdx+':F'+rowIdx, [[nombre, tipoCliente, contacto, ciudad, telefono, correo]]);
-    } else { await sheetsAppend('Clientes', [[nombre, tipoCliente, contacto, ciudad, telefono, correo]]); }
+    var data = await sheetsRead('Clientes', 'A1:A200');
+    var rows = data.values || [];
+    // Find existing row (skip header row 0)
+    var rowIdx = -1;
+    for(var i=1; i<rows.length; i++) {
+      if((rows[i][0]||'').toLowerCase().trim() === nombre.toLowerCase().trim()) {
+        rowIdx = i + 1; // 1-indexed sheet row
+        break;
+      }
+    }
+    var rowData = [[nombre, tipoCliente, contacto, ciudad, telefono, correo]];
+    if(rowIdx > 0) {
+      // Update existing row
+      await sheetsUpdate('Clientes', 'A'+rowIdx+':F'+rowIdx, rowData);
+    } else {
+      // Add new — ensure header exists first
+      if(rows.length === 0) {
+        await sheetsAppend('Clientes', [['Nombre','TipoCliente','Contacto','Ciudad','Telefono','Correo']]);
+      }
+      await sheetsAppend('Clientes', rowData);
+    }
   } catch(e) { console.log('guardarCliente error:', e); }
 }
 
