@@ -1567,7 +1567,7 @@ function openVersionModal(base, versions) {
     var vcode  = r[0]||'';
     var ver    = vcode.match(/-V(\d+)$/) ? vcode.match(/-V(\d+)$/)[1] : (idx+1);
     var estado = r[7]||'En elaboración';
-    var fecha  = r[17]||'—'; // column R = fecha guardado
+    var fecha  = fmtFecha(r[17]); // column R = fecha guardado
     var monto  = fmtMoney(parseFloat(r[5]||0));
     var stClass = estado.toLowerCase().includes('aprob') ? 'aprobada'
                 : estado.toLowerCase().includes('revisi') ? 'revision'
@@ -1582,7 +1582,7 @@ function openVersionModal(base, versions) {
           '<span class="ver-badge">V' + ver + '</span>' +
           '<span style="color:#fff;font-size:13px;font-family:monospace">' + esc(vcode) + '</span>' +
         '</div>' +
-        '<div class="ver-meta">Guardado: ' + esc(r[17]||r[14]||'—') + ' · ' + monto + '</div>' +
+        '<div class="ver-meta">Guardado: ' + esc(fmtFecha(r[17])) + ' · ' + monto + '</div>' +
       '</div>' +
       '<span class="ver-status ' + stClass + '">' + esc(estado) + '</span>';
     item.addEventListener('click', function() {
@@ -1613,7 +1613,7 @@ function showVersionDetail(r, versions) {
     itemCount = items.filter(function(i){return i.type==='item';}).length;
   } catch(e) {}
 
-  var fechaGuardado = r[17] || '—';
+  var fechaGuardado = fmtFecha(r[17]);
   var proyecto = (friData && friData.proyecto) ? friData.proyecto : (r[2]||'—');
   var contacto = (friData && friData.contacto) ? friData.contacto : (r[3]||'—');
   content.innerHTML =
@@ -2178,7 +2178,7 @@ async function guardar() {
     JSON.stringify(friData),           // O: FRI completo JSON
     cvStatus,                          // P: CV resultado
     gv('cv-validado-por'),             // Q: Validado por
-    new Date().toLocaleDateString('es-SV'), // R: Fecha guardado
+    (function(){ var d=new Date(); return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear(); })(), // R: Fecha guardado
   ]];
 
   if(window.location.protocol === 'file:') {
@@ -2351,6 +2351,19 @@ function updatePreview() {
 // ═══════════════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════════════
+
+function fmtFecha(val) {
+  if(!val) return '—';
+  var v = String(val).trim();
+  // If it's a numeric serial (Google Sheets date serial)
+  if(/^\d{4,6}$/.test(v)) {
+    // Sheets serial: days since Dec 30, 1899
+    var d = new Date((parseInt(v) - 25569) * 86400000);
+    return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+  }
+  return v;
+}
+
 function fmtMoney(n) {
   return '$'+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 }
