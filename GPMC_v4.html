@@ -340,6 +340,11 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
       <div class="sp-card-title">Reutilizar como base</div>
       <div class="sp-card-desc">Copiar ítems de una propuesta anterior</div>
     </div>
+    <div class="sp-card" id="btn-status">
+      <div class="sp-icon-wrap">📊</div>
+      <div class="sp-card-title">Estado de ofertas</div>
+      <div class="sp-card-desc">Ver versiones, aprobar y gestionar resultados</div>
+    </div>
   </div>
   <div class="sp-footer">GPMC &nbsp;·&nbsp; REP — Sistema de propuestas &nbsp;·&nbsp; v8.0</div>
 </div>
@@ -429,6 +434,87 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
     </div>
     <div class="mfooter">
       <button class="btn btn-light btn-sm" onclick="closeClientesModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: ESTADO DE OFERTAS — buscador -->
+<div id="modal-estado" class="modal">
+  <div class="mbox" style="max-width:640px">
+    <div class="mhdr">
+      <h3>📊 Estado de ofertas</h3>
+      <button class="mbtn-close" onclick="closeEstadoModal()">×</button>
+    </div>
+    <div class="mbody">
+      <input type="text" class="msearch" id="estado-search"
+        placeholder="Buscar por código, cliente o proyecto…"
+        oninput="filterEstadoList()">
+      <div id="estado-list" class="plist">
+        <div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando ofertas…</div>
+      </div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-light btn-sm" onclick="closeEstadoModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL: GESTIÓN DE OFERTA -->
+<div id="panel-oferta" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;overflow-y:auto">
+  <div style="max-width:780px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <!-- Header panel -->
+    <div style="background:#2C2C2C;padding:20px 28px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div id="panel-codigo" style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.5px"></div>
+        <div id="panel-info" style="font-size:11px;color:#aaa;margin-top:3px"></div>
+      </div>
+      <button onclick="closePanelOferta()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <div style="padding:24px 28px">
+      <!-- Versiones -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:.8px;margin-bottom:10px">Versiones</div>
+      <div id="panel-versiones" style="border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;margin-bottom:24px"></div>
+
+      <!-- Resultado final -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:.8px;margin-bottom:12px">Resultado final</div>
+      <div style="background:#f8f9fb;border-radius:8px;padding:16px;border:1px solid #e8e8e8">
+        <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="resultado-final" value="Pendiente" id="res-pendiente">
+            <span style="color:#888">⏳ Pendiente de respuesta</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="resultado-final" value="Adjudicada" id="res-adj">
+            <span style="color:#27ae60">✓ Adjudicada</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="radio" name="resultado-final" value="No adjudicada" id="res-noadj">
+            <span style="color:#c0392b">✗ No adjudicada</span>
+          </label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <label style="font-size:11px;color:#888;font-weight:600">Monto adjudicado</label>
+            <input id="res-monto" type="number" placeholder="$0.00"
+              style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+          </div>
+          <div>
+            <label style="font-size:11px;color:#888;font-weight:600">Fecha</label>
+            <input id="res-fecha" type="date"
+              style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;color:#888;font-weight:600">Observaciones finales</label>
+          <textarea id="res-obs" rows="2" placeholder="Observaciones…"
+            style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn btn-red btn-sm" onclick="guardarResultado()">💾 Guardar resultado</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -753,9 +839,15 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
     </div>
 
     <!-- FRI Actions -->
-    <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:20px" class="no-print">
-      <button class="btn btn-ghost btn-sm" onclick="guardar()">💾 Guardar borrador</button>
-      <button class="btn btn-red" onclick="goToStep(2)">Continuar a PEP →</button>
+    <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:20px" class="no-print">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="abrirFRIBlanco()" title="Descargar formato en blanco para imprimir">🖨 FRI en blanco</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirFRIComplementado()" title="Descargar FRI con datos ingresados">📄 FRI complementado</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="guardar()">💾 Guardar borrador</button>
+        <button class="btn btn-red" onclick="goToStep(2)">Continuar a PEP →</button>
+      </div>
     </div>
 
   </div><!-- /step-fri -->
@@ -912,6 +1004,8 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
     <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:20px" class="no-print">
       <button class="btn btn-ghost btn-sm" onclick="goToStep(2)">← Volver a PEP</button>
       <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="abrirCVBlanco()" title="Checklist en blanco para imprimir">🖨 CV en blanco</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirCVComplementado()" title="CV con criterios marcados">📋 CV complementado</button>
         <button class="btn btn-ghost btn-sm" onclick="guardar()">💾 Guardar con CV</button>
         <button class="btn btn-red" onclick="goToStep(4)">Generar PDF →</button>
       </div>
@@ -2453,11 +2547,885 @@ async function guardarCliente(nombre,tipoCliente,contacto,ciudad,telefono,correo
   } catch(e){console.log('guardarCliente err:',e);}
 }
 
+// ═══════════════════════════════════════════════════════
+// FRI PDF v3 — 2 páginas, colores GPMC, simetría perfecta
+// ═══════════════════════════════════════════════════════
+async function generarFRI(modo) {
+  await loadPDFAssets();
+  var fri = modo === 'filled' ? getFRIData() : null;
+  var doc = new window.jspdf.jsPDF({orientation:'portrait',unit:'pt',format:'letter'});
+  var PW=612, PH=792;
+
+  // ── Márgenes y medidas exactas ────────────────────────
+  var ML=36, MR=36, MT=24, MB=28;
+  var CW=PW-ML-MR;          // 540pt ancho de contenido
+  var LBL=140;               // ancho de columna label (izquierda)
+  var VAL=CW-LBL;            // ancho de columna valor (derecha)
+  var LBL2=CW/2-10;         // para filas de 2 columnas: label mitad
+  var VAL2=CW/2-LBL/2-LBL2+LBL/2; // valor mitad (simplificado)
+  var ROW=20;                // altura fila normal
+  var ROW_L=48;              // altura fila con área de escritura grande
+
+  // ── Colores GPMC ──────────────────────────────────────
+  // Rojo: del logo GPMC
+  var C_RED  = [192, 0,   0  ];  // rojo vivo del logo
+  var C_DARK = [44,  44,  44 ];  // gris oscuro del logo
+  var C_HDR  = [44,  44,  44 ];  // mismo gris para headers de sección
+  var C_LBL  = [230, 235, 242];  // azul muy claro para celdas label
+  var C_LBL2 = [220, 226, 238];  // azul claro ligeramente más oscuro
+  var C_WHITE= [255, 255, 255];
+  var C_BORD = [160, 168, 185];  // borde azul-gris
+  var C_TXT  = [30,  30,  30 ];  // texto oscuro
+  var C_LTXT = [75,  85,  100];  // texto label
+  var C_FOOT = [240, 242, 246];  // footer row bg
+
+  // ── Helpers ───────────────────────────────────────────
+  function v(f){ return (modo==='filled'&&f) ? String(f) : ''; }
+
+  function setF(style,sz,color){
+    doc.setFont('helvetica', style||'normal');
+    doc.setFontSize(sz||8);
+    var c=color||C_TXT;
+    doc.setTextColor(c[0],c[1],c[2]);
+  }
+  function setBorder(c){
+    var bc=c||C_BORD;
+    doc.setDrawColor(bc[0],bc[1],bc[2]);
+    doc.setLineWidth(0.5);
+  }
+  function fillRect(x,y,w,h,c){
+    doc.setFillColor(c[0],c[1],c[2]);
+    doc.rect(x,y,w,h,'F');
+  }
+  function strokeRect(x,y,w,h){
+    setBorder(); doc.rect(x,y,w,h,'S');
+  }
+  function fillStroke(x,y,w,h,fill){
+    fillRect(x,y,w,h,fill); setBorder(); doc.rect(x,y,w,h,'S');
+  }
+
+  // Label cell: colored bg + bold label text, left-aligned
+  function lbl(text,x,y,w,h){
+    fillStroke(x,y,w,h,C_LBL);
+    setF('bold',7.5,C_LTXT);
+    doc.text(text, x+5, y+h/2+2.5);
+  }
+
+  // Value cell: white bg + normal text
+  function val(text,x,y,w,h){
+    fillStroke(x,y,w,h,C_WHITE);
+    if(text){ setF('normal',8,C_TXT); doc.text(text,x+5,y+h/2+2.5,{maxWidth:w-8}); }
+  }
+
+  // Full row: label left, value right — full width
+  function fullRow(label,value,y,h){
+    h=h||ROW;
+    lbl(label, ML,     y, LBL,     h);
+    val(value, ML+LBL, y, CW-LBL,  h);
+    return y+h;
+  }
+
+  // Half row: [label|value] [label|value] — split at midpoint
+  // Each half: label=HL wide, value=rest
+  function halfRow(lab1,val1,lab2,val2,y,h,HL){
+    h=h||ROW; HL=HL||120;
+    var HW=CW/2;  // 270pt each half
+    lbl(lab1, ML,       y, HL,      h);
+    val(val1, ML+HL,    y, HW-HL,   h);
+    lbl(lab2, ML+HW,    y, HL,      h);
+    val(val2, ML+HW+HL, y, HW-HL,   h);
+    return y+h;
+  }
+
+  // Text area: label spans full width as mini header, then tall value cell
+  function textArea(label,value,y,h){
+    h=h||ROW_L;
+    fillStroke(ML,y,CW,ROW,C_LBL);
+    setF('bold',7.5,C_LTXT); doc.text(label,ML+5,y+ROW/2+2.5);
+    y+=ROW;
+    fillStroke(ML,y,CW,h,C_WHITE);
+    if(value){
+      setF('normal',8,C_TXT);
+      var lines=doc.splitTextToSize(value,CW-10);
+      doc.text(lines,ML+5,y+11);
+    }
+    return y+h;
+  }
+
+  // Section header: dark bg, white bold text
+  function sectionHdr(label,y){
+    fillRect(ML,y,CW,16,C_HDR);
+    setBorder(C_HDR); doc.rect(ML,y,CW,16,'S');
+    setF('bold',8.5,[255,255,255]);
+    doc.text(label, ML+6, y+11.5);
+    return y+16;
+  }
+
+  // Checkbox helper
+  function chk(label,checked,x,y){
+    setBorder(C_DARK); doc.setLineWidth(0.6);
+    doc.rect(x,y-6,7,7,'S');
+    if(checked){
+      doc.setDrawColor(C_RED[0],C_RED[1],C_RED[2]); doc.setLineWidth(1);
+      doc.line(x+1,y-5,x+6,y); doc.line(x+6,y-5,x+1,y);
+    }
+    setF('normal',7.5,C_TXT);
+    doc.text(label,x+10,y);
+    return x+10+doc.getTextWidth(label)+10;
+  }
+
+  // Checkbox row: label cell left, checkboxes in value cell
+  function chkRow(label,options,selected,y,h){
+    h=h||ROW;
+    lbl(label,ML,y,LBL,h);
+    fillStroke(ML+LBL,y,CW-LBL,h,C_WHITE);
+    var cx=ML+LBL+8, cy=y+h/2+2.5;
+    options.forEach(function(o){ cx=chk(o,selected===o,cx,cy); });
+    return y+h;
+  }
+
+  // Tipo de proyecto row with "Otro:" + line
+  function tipoPrRow(selected,y){
+    lbl('Tipo de proyecto:',ML,y,LBL,ROW);
+    fillStroke(ML+LBL,y,CW-LBL,ROW,C_WHITE);
+    var cx=ML+LBL+8, cy=y+ROW/2+2.5;
+    ['Civil','Eléctrico','Sistemas','Mixto'].forEach(function(o){ cx=chk(o,selected===o,cx,cy); });
+    cx=chk('Otro:',selected==='Otro',cx,cy);
+    setBorder([180,180,180]); doc.setLineWidth(0.4);
+    doc.line(cx,cy+1,cx+55,cy+1);
+    if(selected==='Otro'){setF('normal',7.5,C_TXT);doc.text('',cx+1,cy-1);}
+    return y+ROW;
+  }
+
+  // ── PAGE HEADER (same on both pages) ─────────────────
+  function drawPageHeader(pageNum){
+    var HY=MT;
+    var LOGO_W=90, TITLE_W=180, INFO_W=CW-LOGO_W-TITLE_W;
+    var ROW1H=32, ROW2H=18, HDR_H=ROW1H+ROW2H;
+
+    // Logo cell
+    fillStroke(ML, HY, LOGO_W, HDR_H, C_WHITE);
+    if(PDF_LOGO){
+      var lh=26, lw=Math.round(lh/0.421);
+      if(lw>LOGO_W-4) lw=LOGO_W-4;
+      try{ doc.addImage(PDF_LOGO,'PNG',ML+(LOGO_W-lw)/2,HY+(HDR_H-lh)/2,lw,lh); }catch(e){}
+    }
+
+    // Title cell (dark)
+    fillRect(ML+LOGO_W, HY, TITLE_W, HDR_H, C_HDR);
+    setBorder(C_HDR); doc.rect(ML+LOGO_W,HY,TITLE_W,HDR_H,'S');
+    setF('bold',10,[255,255,255]);
+    doc.text('FORMATO DE RECOPILACIÓN', ML+LOGO_W+6, HY+14);
+    doc.text('DE INFORMACION',          ML+LOGO_W+6, HY+26);
+
+    // 3 info cells top row
+    var IX=ML+LOGO_W+TITLE_W, cellW=INFO_W/3;
+    var labels=['Codigo:','Version:','Fecha:'];
+    var vals=[v(fri&&fri.codigo)||'FRI-____',
+              v(fri&&fri.version)||'V1.0',
+              v(fri&&fri.fechaSolicitud)||'__/__/____'];
+    for(var i=0;i<3;i++){
+      fillStroke(IX+i*cellW, HY, cellW, ROW1H, C_LBL);
+      setF('bold',7,C_LTXT); doc.text(labels[i], IX+i*cellW+4, HY+9);
+      setF('normal',8,C_TXT); doc.text(vals[i],  IX+i*cellW+4, HY+22);
+    }
+
+    // Bottom row: company name + Estado (no page numbers)
+    var compW=LOGO_W+TITLE_W+cellW*2;
+    fillStroke(ML, HY+ROW1H, compW, ROW2H, [248,249,252]);
+    setF('normal',7.5,C_LTXT);
+    doc.text('Grupo Proyectos Multiples de Construccion S.A. de C.V.',
+             ML+LOGO_W+4, HY+ROW1H+12);
+
+    // Estado — last cell, fully inside CW
+    var EX=ML+compW;
+    fillStroke(EX, HY+ROW1H, cellW, ROW2H, C_LBL);
+    setF('bold',7,C_LTXT); doc.text('Estado:', EX+4, HY+ROW1H+8);
+    var estadoVal=v(fri&&fri.estado)||'En elaboracion';
+    fillRect(EX+4, HY+ROW1H+9, cellW-8, ROW2H-10, C_RED);
+    setF('bold',6,[255,255,255]);
+    doc.text(estadoVal, EX+6, HY+ROW1H+ROW2H-4, {maxWidth:cellW-10});
+  }
+
+
+  // ── RED TOP STRIPE ────────────────────────────────────
+  function drawRedStripe(){
+    fillRect(0,0,PW,5,C_RED);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // PÁGINA 1
+  // ══════════════════════════════════════════════════════
+  drawRedStripe();
+  drawPageHeader(1);
+  var y=MT+56;
+
+  // SECCIÓN 1
+  y=sectionHdr('SECCIÓN 1 — Identificación de la propuesta',y);
+  y=halfRow('Código de propuesta:',v(fri&&fri.codigo),
+            'Fecha de solicitud:',v(fri&&fri.fechaSolicitud),y,ROW,LBL);
+  y=fullRow('Nombre del cliente:',v(fri&&fri.cliente),y,ROW);
+
+  // Tipo cliente + Contacto
+  lbl('Tipo de cliente:',ML,y,LBL,ROW);
+  fillStroke(ML+LBL,y,CW/2-LBL,ROW,C_WHITE);
+  var cx0=ML+LBL+8, cy0=y+ROW/2+2.5;
+  var tc=v(fri&&fri.tipoCliente);
+  cx0=chk('Nuevo',tc==='Nuevo',cx0,cy0);
+  chk('Recurrente',tc==='Recurrente',cx0,cy0);
+  lbl('Contacto principal:',ML+CW/2,y,LBL,ROW);
+  val(v(fri&&fri.contacto),ML+CW/2+LBL,y,CW/2-LBL,ROW);
+  y+=ROW;
+
+  y=halfRow('Teléfono / WhatsApp:',v(fri&&fri.telefono),
+            'Correo electrónico:',v(fri&&fri.correo),y,ROW,LBL);
+  y=halfRow('Recibido por:',v(fri&&fri.recibidoPor),
+            'Cargo:',v(fri&&fri.cargo),y,ROW,LBL);
+
+  // SECCIÓN 2
+  y+=3; y=sectionHdr('SECCIÓN 2 — Información del proyecto',y);
+  y=tipoPrRow(v(fri&&fri.tipoProy),y);
+  y=fullRow('Nombre del proyecto:',v(fri&&fri.proyecto),y,ROW);
+  y=textArea('Descripción del alcance:',v(fri&&fri.alcance),y,52);
+  y=fullRow('Ubicación del proyecto:',v(fri&&fri.ubicacion),y,ROW);
+  y=fullRow('Condiciones especiales del sitio:',v(fri&&fri.condSitio),y,ROW);
+
+  // SECCIÓN 3
+  y+=3; y=sectionHdr('SECCIÓN 3 — Requerimientos técnicos',y);
+  y=textArea('Materiales o sistemas requeridos:',v(fri&&fri.materiales),y,52);
+  y=fullRow('Normativas o especificaciones aplicables:',v(fri&&fri.normativas),y,ROW);
+  y=fullRow('Acabados o características especiales:',v(fri&&fri.acabados),y,ROW);
+
+  // SECCIÓN 4
+  y+=3; y=sectionHdr('SECCIÓN 4 — Plazos y condiciones',y);
+  y=halfRow('Fecha máx. entrega propuesta:',v(fri&&fri.fechaEntrega),
+            'Fecha estimada de inicio:',v(fri&&fri.fechaInicio),y,ROW,LBL);
+  y=halfRow('Plazo de ejecución estimado:',v(fri&&fri.ejecucion),
+            'Condiciones de pago preferidas:',v(fri&&fri.pago),y,ROW,LBL);
+
+  // Presupuesto + Prioridad
+  lbl('Presupuesto referencial del cliente:',ML,y,LBL,ROW);
+  val(v(fri&&fri.presRef)?('$'+v(fri.presRef)):'',ML+LBL,y,CW/2-LBL,ROW);
+  lbl('Prioridad:',ML+CW/2,y,LBL,ROW);
+  fillStroke(ML+CW/2+LBL,y,CW/2-LBL,ROW,C_WHITE);
+  var prx=ML+CW/2+LBL+8, pry=y+ROW/2+2.5, prio=v(fri&&fri.prioridad);
+  ['Alta','Media','Normal'].forEach(function(p){prx=chk(p,prio===p,prx,pry);});
+  y+=ROW;
+
+  // Red footer stripe p1
+  fillRect(0,PH-5,PW,5,C_RED);
+
+  // ══════════════════════════════════════════════════════
+  // PÁGINA 2
+  // ══════════════════════════════════════════════════════
+  doc.addPage();
+  drawRedStripe();
+  drawPageHeader(2);
+  y=MT+68;
+
+  // SECCIÓN 5
+  y=sectionHdr('SECCIÓN 5 — Información comercial',y);
+  y=fullRow('Ciudad / Lugar:',v(fri&&fri.ciudad),y,ROW);
+  y=fullRow('Propuestas anteriores de referencia:',v(fri&&fri.propAnt),y,ROW);
+  y=textArea('Observaciones comerciales:',v(fri&&fri.obsComerciales),y,60);
+
+  // SECCIÓN 6
+  y+=3; y=sectionHdr('SECCIÓN 6 — Control documental',y);
+  y=halfRow('Elaborado por:',v(fri&&fri.elaboradoPor),
+            'Revisado por:',v(fri&&fri.revisadoPor),y,ROW,LBL);
+
+  // FIRMAS
+  y+=20;
+  var FW=(CW-30)/2;
+
+  // Firma izquierda
+  fillStroke(ML,y,FW,72,C_WHITE);
+  // Línea de firma
+  doc.setDrawColor(C_DARK[0],C_DARK[1],C_DARK[2]); doc.setLineWidth(0.6);
+  doc.line(ML+12,y+54,ML+FW-12,y+54);
+  setF('bold',7.5,C_LTXT);
+  doc.text('Personal que recopiló la información / Fecha',ML+6,y+64);
+  if(fri&&fri.recibidoPor){
+    setF('normal',8,C_TXT); doc.text(v(fri.recibidoPor),ML+12,y+44);
+    if(fri.cargo){setF('normal',7,[120,120,120]);doc.text(v(fri.cargo),ML+12,y+54);}
+  }
+
+  // Firma derecha
+  fillStroke(ML+FW+30,y,FW,72,C_WHITE);
+  doc.line(ML+FW+42,y+54,ML+FW*2+18,y+54);
+  setF('bold',7.5,C_LTXT);
+  doc.text('Revisado por / Fecha',ML+FW+36,y+64);
+  if(fri&&fri.revisadoPor){
+    setF('normal',8,C_TXT); doc.text(v(fri.revisadoPor),ML+FW+42,y+44);
+  }
+  y+=82;
+
+  // Footer note — fixed position, no overlap
+  var footY2=PH-MB-22;
+  fillStroke(ML,footY2,CW,20,C_FOOT);
+  setF('italic',7,[100,110,130]);
+  doc.text('\u2605  Archivar en: 01_Propuestas_Activas / GPMC-A\u00D1O-N\u00DAM_NombreCliente_FRI.pdf',ML+6,footY2+13,{maxWidth:CW-12});
+
+  // Red stripe + center text — no overlap
+  fillRect(0,PH-6,PW,6,C_RED);
+  setF('normal',7,[120,120,120]);
+  doc.text('GPMC S.A. de C.V. \u2014 Sistema de Propuestas Comerciales \u2014 FRI v1.0',PW/2,PH-10,{align:'center'});
+
+  // ── SAVE ─────────────────────────────────────────────
+  var suffix=modo==='blank'?'FRI_EnBlanco':'FRI_'+propCode;
+  doc.save('GPMC_'+suffix+'.pdf');
+  toast('\u2713 '+suffix+' descargado','ok');
+}
+
+function abrirFRIBlanco(){ generarFRI('blank'); }
+function abrirFRIComplementado(){ generarFRI('filled'); }
+
+
+// ═══════════════════════════════════════════════════════
+// CV PDF — Checklist de Validación, fiel al Anexo 4
+// modo: 'blank' | 'filled'
+// ═══════════════════════════════════════════════════════
+async function generarCV(modo) {
+  try {
+
+  var friD=typeof getFRIData==='function'?getFRIData():{};
+  await loadPDFAssets();
+  var doc = new window.jspdf.jsPDF({orientation:'portrait',unit:'pt',format:'letter'});
+  var PW=612, PH=792, ML=36, MR=36, MT=24, MB=28, CW=540;
+
+  // Colores GPMC
+  var C_RED  = [192,0,0];
+  var C_HDR  = [44,44,44];
+  var C_LBL  = [230,235,242];
+  var C_WHITE= [255,255,255];
+  var C_BORD = [160,168,185];
+  var C_TXT  = [30,30,30];
+  var C_LTXT = [75,85,100];
+  var C_GRP  = [60,70,90];   // group header
+  var C_FOOT = [240,242,246];
+  var C_OK   = [220,240,220]; // aprobada green tint
+  var C_NO   = [255,228,228]; // rechazada red tint
+
+  function v(f){ return (modo==='filled'&&f)?String(f):''; }
+  function setF(style,sz,color){
+    doc.setFont('helvetica',style||'normal');
+    doc.setFontSize(sz||8);
+    var c=color||C_TXT;
+    doc.setTextColor(c[0],c[1],c[2]);
+  }
+  function setBorder(){
+    doc.setDrawColor(C_BORD[0],C_BORD[1],C_BORD[2]);
+    doc.setLineWidth(0.5);
+  }
+  function fillRect(x,y,w,h,c){
+    doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,h,'F');
+  }
+  function fillStroke(x,y,w,h,fill){
+    fillRect(x,y,w,h,fill); setBorder(); doc.rect(x,y,w,h,'S');
+  }
+  function lbl(text,x,y,w,h){
+    fillStroke(x,y,w,h,C_LBL);
+    setF('bold',7.5,C_LTXT); doc.text(text,x+5,y+h/2+2.5);
+  }
+  function valCell(text,x,y,w,h){
+    fillStroke(x,y,w,h,C_WHITE);
+    if(text){setF('normal',8,C_TXT);doc.text(text,x+5,y+h/2+2.5,{maxWidth:w-8});}
+  }
+  function halfRow(lab1,val1,lab2,val2,y,h,HL){
+    h=h||20;HL=HL||120;var HW=CW/2;
+    lbl(lab1,ML,y,HL,h);valCell(val1,ML+HL,y,HW-HL,h);
+    lbl(lab2,ML+HW,y,HL,h);valCell(val2,ML+HW+HL,y,HW-HL,h);
+    return y+h;
+  }
+  function fullRow(label,value,y,h,LW){
+    h=h||20;LW=LW||120;
+    lbl(label,ML,y,LW,h);valCell(value,ML+LW,y,CW-LW,h);
+    return y+h;
+  }
+  function sectionHdr(label,y){
+    fillRect(ML,y,CW,16,C_HDR); setBorder(); doc.rect(ML,y,CW,16,'S');
+    setF('bold',8.5,[255,255,255]); doc.text(label,ML+6,y+11.5);
+    return y+16;
+  }
+  function groupHdr(label,y){
+    fillRect(ML,y,CW,12,C_GRP); setBorder(); doc.rect(ML,y,CW,12,'S');
+    setF('bold',7,[200,210,230]); doc.text(label,ML+6,y+9);
+    return y+12;
+  }
+
+  // ── Checkbox helper ───────────────────────────────────
+  function drawChk(checked,fill,x,y,sz){
+    sz=sz||9;
+    if(fill){fillRect(x,y-sz+2,sz,sz,fill);}
+    setBorder(); doc.setLineWidth(0.6); doc.rect(x,y-sz+2,sz,sz,'S');
+    if(checked){
+      doc.setDrawColor(C_RED[0],C_RED[1],C_RED[2]); doc.setLineWidth(1.2);
+      doc.line(x+1,y-sz+4,x+sz-1,y+1); doc.line(x+sz-1,y-sz+4,x+1,y+1);
+    }
+  }
+
+  // ── Page header (same as FRI) ─────────────────────────
+  function drawPageHeader(){
+    var HY=MT;
+    var LOGO_W=90,TITLE_W=180,INFO_W=CW-LOGO_W-TITLE_W;
+    var ROW1H=32,ROW2H=18;
+
+    fillStroke(ML,HY,LOGO_W,ROW1H+ROW2H,C_WHITE);
+    if(PDF_LOGO){
+      var lh=26,lw=Math.round(lh/0.421);
+      if(lw>LOGO_W-4)lw=LOGO_W-4;
+      try{doc.addImage(PDF_LOGO,'PNG',ML+(LOGO_W-lw)/2,HY+(ROW1H+ROW2H-lh)/2,lw,lh);}catch(e){}
+    }
+    fillRect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,C_HDR);
+    setBorder(C_HDR);doc.rect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,'S');
+    setF('bold',10,[255,255,255]);
+    doc.text('CHECKLIST DE VALIDACION',ML+LOGO_W+6,HY+14);
+    doc.text('DE PROPUESTA',ML+LOGO_W+6,HY+26);
+
+    var IX=ML+LOGO_W+TITLE_W,cellW=INFO_W/3;
+    var _hdrFRI=typeof friD!=='undefined'?friD:(typeof getFRIData==='function'?getFRIData():{});
+    var _filled=[v(propCode)||'CV-____',v(_hdrFRI.version)||'V1.0',v(_hdrFRI.fechaSolicitud)||'__/__/____'];
+    ['Codigo:','Version:','Fecha:'].forEach(function(lab,i){
+      fillStroke(IX+i*cellW,HY,cellW,ROW1H,C_LBL);
+      setF('bold',7,C_LTXT);doc.text(lab,IX+i*cellW+4,HY+9);
+      setF('normal',8,C_TXT);doc.text(_filled[i],IX+i*cellW+4,HY+22);
+    });
+
+    var compW=LOGO_W+TITLE_W+cellW*2;
+    fillStroke(ML,HY+ROW1H,compW,ROW2H,[248,249,252]);
+    setF('normal',7.5,C_LTXT);
+    doc.text('Grupo Proyectos Multiples de Construccion S.A. de C.V.',ML+LOGO_W+4,HY+ROW1H+12);
+
+    var EX=ML+compW;
+    fillStroke(EX,HY+ROW1H,cellW,ROW2H,C_LBL);
+    setF('bold',7,C_LTXT);doc.text('Estado:',EX+4,HY+ROW1H+8);
+    var estadoVal=v(_hdrFRI&&_hdrFRI.estado)||'En revision';
+    fillRect(EX+4,HY+ROW1H+9,cellW-8,ROW2H-10,C_RED);
+    setF('bold',6,[255,255,255]);
+    doc.text(estadoVal,EX+6,HY+ROW1H+ROW2H-4,{maxWidth:cellW-10});
+  }
+
+  // ══════════════════════════════════════════════════════
+  // BUILD DOCUMENT
+  // ══════════════════════════════════════════════════════
+  fillRect(0,0,PW,5,C_RED); // top stripe
+  drawPageHeader();
+  var y=MT+56;
+
+  // ── IDENTIFICACIÓN ────────────────────────────────────
+  y=sectionHdr('IDENTIFICACION',y);
+  // friD already defined above
+  y=halfRow('Codigo de propuesta:',v(propCode),
+            'Version a validar:',v(friD&&friD.version||propVersion),y,20,130);
+  y=halfRow('Cliente:',v(modo==='filled'?friD.cliente:''),
+            'Fecha de validacion:',v(friD&&friD.fechaSolicitud),y,20,130);
+  var _cvValidadoPor=(document.getElementById('cv-validado-por')||{}).value||'';
+  y=fullRow('Validado por:',v(_cvValidadoPor),y,20,130);
+
+  // ── CRITERIOS ─────────────────────────────────────────
+  y+=3; y=sectionHdr('CRITERIOS DE VALIDACION',y);
+
+  // Table header — 2 rows for checkbox labels to avoid overflow
+  var NC_W=24, CHK_W=38, CHK_TOTAL=CHK_W*3, CRIT_W=CW-NC_W-CHK_TOTAL;
+  var HDR_ROW=22; // taller header to fit 2-line text
+  fillRect(ML,y,CW,HDR_ROW,C_HDR); setBorder(); doc.rect(ML,y,CW,HDR_ROW,'S');
+  setF('bold',7,[255,255,255]);
+  // # column
+  doc.text('#',ML+NC_W/2,y+HDR_ROW/2+3,{align:'center'});
+  // Criterio label
+  doc.text('Criterio de verificacion',ML+NC_W+4,y+HDR_ROW/2+3);
+  // Checkbox headers — 2 lines centered
+  var chkLabels=[['Cum-','ple'],['No','cumple'],['N/A','']];
+  var chkOffsets=[NC_W+CRIT_W, NC_W+CRIT_W+CHK_W, NC_W+CRIT_W+CHK_W*2];
+  chkLabels.forEach(function(lines,i){
+    var cx=ML+chkOffsets[i]+CHK_W/2;
+    doc.text(lines[0],cx,y+9,{align:'center'});
+    if(lines[1]) doc.text(lines[1],cx,y+18,{align:'center'});
+  });
+  // vertical dividers
+  setBorder();
+  [NC_W, NC_W+CRIT_W, NC_W+CRIT_W+CHK_W, NC_W+CRIT_W+CHK_W*2].forEach(function(x){
+    doc.line(ML+x,y,ML+x,y+HDR_ROW);
+  });
+  y+=HDR_ROW;
+
+  // Criteria data
+  var groups=[
+    {label:'A. INFORMACION Y DOCUMENTACION', items:[
+      'El codigo de propuesta y numero de version estan correctamente registrados en el encabezado.',
+      'Todos los datos del cliente registrados en el FRI estan reflejados en la propuesta.',
+      'La descripcion del alcance coincide con lo registrado en el FRI sin omisiones.',
+      'Las condiciones especiales del sitio estan contempladas en la propuesta.'
+    ]},
+    {label:'B. COSTOS Y ASPECTOS TECNICOS', items:[
+      'El listado de items esta completo y los costos unitarios provienen de la BBDD actualizada.',
+      'El resumen de costos concuerda correctamente con el detalle del listado de items.',
+      'El cronograma referencial es coherente con el alcance y los tiempos estandar de la BBDD.',
+      'Los materiales y sistemas especificados corresponden a los requerimientos tecnicos del cliente.'
+    ]},
+    {label:'C. FORMATO Y PRESENTACION', items:[
+      'La propuesta esta elaborada en la Plantilla Estructurada de Propuesta (PEP) en su version vigente.',
+      'El logo y los datos de la empresa estan correctamente presentados en el encabezado.',
+      'No existen errores ortograficos, datos incompletos ni campos vacios sin justificacion.',
+      'Las condiciones comerciales (forma de pago, validez, exclusiones) estan completas y actualizadas.'
+    ]},
+    {label:'D. CONTROL DOCUMENTAL', items:[
+      'La version ha sido registrada en la MCV con fecha, responsable y estado actualizado.',
+      'El archivo esta guardado en el repositorio con la nomenclatura correcta (GPMC-ANO-NUM_Cliente_Tipo_Vx).',
+      'La propuesta esta lista para revision y aprobacion gerencial sin observaciones pendientes.'
+    ]}
+  ];
+
+  var itemN=0;
+  groups.forEach(function(g){
+    // Group header
+    groupHdr(g.label,y); y+=14;
+
+    g.items.forEach(function(criterio){
+      itemN++;
+      var lines=doc.splitTextToSize(criterio,CRIT_W-6);
+      var rowH=Math.max(18, lines.length<=1?18:lines.length*8+6);
+
+      var ans=modo==='filled'?cvAnswers[itemN]:null;
+      var rowBg=ans==='si'?[240,250,240]:ans==='no'?[255,238,238]:C_WHITE;
+
+      // Row bg
+      fillRect(ML,y,CW,rowH,rowBg);
+      setBorder(); doc.rect(ML,y,CW,rowH,'S');
+
+      // # number
+      doc.setDrawColor(C_BORD[0],C_BORD[1],C_BORD[2]);
+      doc.line(ML+NC_W,y,ML+NC_W,y+rowH);
+      setF('bold',8,C_LTXT); doc.text(String(itemN),ML+NC_W/2,y+rowH/2+3,{align:'center'});
+
+      // Criterio text
+      doc.line(ML+NC_W+CRIT_W,y,ML+NC_W+CRIT_W,y+rowH);
+      setF('normal',7.5,C_TXT); doc.text(lines,ML+NC_W+4,y+10);
+
+      // Checkboxes
+      var chy=y+rowH/2+2;
+      var chkX=[
+        ML+NC_W+CRIT_W+CHK_W/2-4,
+        ML+NC_W+CRIT_W+CHK_W+CHK_W/2-4,
+        ML+NC_W+CRIT_W+CHK_W*2+CHK_W/2-4
+      ];
+      // vertical dividers for checkbox cols
+      setBorder();
+      doc.line(ML+NC_W+CRIT_W+CHK_W,y,ML+NC_W+CRIT_W+CHK_W,y+rowH);
+      doc.line(ML+NC_W+CRIT_W+CHK_W*2,y,ML+NC_W+CRIT_W+CHK_W*2,y+rowH);
+
+      drawChk(ans==='si',null,chkX[0],chy);
+      drawChk(ans==='no',null,chkX[1],chy);
+      drawChk(ans==='na',null,chkX[2],chy);
+
+      y+=rowH;
+    });
+  });
+
+  // ── RESULTADO ─────────────────────────────────────────
+  y+=4; y=sectionHdr('RESULTADO DE LA VALIDACION',y);
+
+  var failed=0,answered=0;
+  if(modo==='filled'){
+    for(var k=1;k<=15;k++){if(cvAnswers[k])answered++;if(cvAnswers[k]==='no')failed++;}
+  }
+  var isAprobada=modo==='filled'&&answered===15&&failed===0;
+  var isRechazada=modo==='filled'&&failed>0;
+
+  var RW=CW/2;
+  // Aprobada
+  fillStroke(ML,y,RW,22,isAprobada?C_OK:C_WHITE);
+  drawChk(isAprobada,null,ML+6,y+15);
+  setF('bold',8,isAprobada?[0,100,0]:C_TXT);
+  doc.text('APROBADA — Puede proceder a revision gerencial',ML+20,y+14);
+  // Rechazada
+  fillStroke(ML+RW,y,RW,22,isRechazada?C_NO:C_WHITE);
+  drawChk(isRechazada,null,ML+RW+6,y+15);
+  setF('bold',8,isRechazada?[150,0,0]:C_TXT);
+  doc.text('RECHAZADA — Corregir criterios y revalidar',ML+RW+20,y+14);
+  y+=22;
+
+  // Observaciones
+  var _cvObs=(document.getElementById('cv-observaciones')||{}).value||'';
+  y=fullRow('Observaciones:',v(_cvObs),y,24,100);
+
+  // Firmas
+  y+=12;
+  var FW=(CW-30)/2;
+  fillStroke(ML,y,FW,56,C_WHITE);
+  doc.setDrawColor(C_HDR[0],C_HDR[1],C_HDR[2]); doc.setLineWidth(0.6);
+  doc.line(ML+10,y+40,ML+FW-10,y+40);
+  setF('bold',7,C_LTXT); doc.text('Validado por / Personal tecnico / Fecha',ML+6,y+50);
+  if(modo==='filled'){
+    if(_cvValidadoPor){setF('normal',8,C_TXT);doc.text(_cvValidadoPor,ML+10,y+32);}
+  }
+
+  fillStroke(ML+FW+30,y,FW,56,C_WHITE);
+  doc.line(ML+FW+40,y+40,ML+FW*2+20,y+40);
+  setF('bold',7,C_LTXT); doc.text('Recibido por / Gerente General / Fecha',ML+FW+36,y+50);
+  y+=66;
+
+  // Footer — always at bottom, white bg to cover any overflow
+  var footY=PH-46;
+  fillRect(0,footY-4,PW,50,[255,255,255]); // white buffer over any overflow
+  fillStroke(ML,footY,CW,18,C_FOOT);
+  setF('italic',6.5,[100,110,130]);
+  doc.text('\u2605  Una propuesta no puede avanzar a aprobacion gerencial con criterios sin cumplir. Archivar en repositorio digital.',ML+5,footY+12,{maxWidth:CW-10});
+  fillRect(0,PH-22,PW,22,[255,255,255]); // white gap
+  fillRect(0,PH-8,PW,8,C_RED);
+  setF('normal',6.5,[120,120,120]);
+  doc.text('GPMC S.A. de C.V. \u2014 Sistema de Propuestas Comerciales \u2014 CV v1.0',PW/2,PH-2,{align:'center'});
+
+  var suffix=modo==='blank'?'CV_EnBlanco':'CV_'+propCode;
+  doc.save('GPMC_'+suffix+'.pdf');
+  toast('\u2713 '+suffix+' descargado','ok');
+
+  } catch(ex) {
+    console.error('[CV ERROR]', ex.message, ex.stack);
+    toast('⚠ Error CV: '+ex.message, 'err');
+  }
+}
+
+function abrirCVBlanco(){ generarCV('blank'); }
+function abrirCVComplementado(){ generarCV('filled'); }
+
+
+// ═══════════════════════════════════════════════════════
+// ESTADO DE OFERTAS
+// ═══════════════════════════════════════════════════════
+var _estadoAllRows = [];   // all Historial rows loaded
+var _estadoFiltered = [];  // grouped by base code
+var _panelBaseCode = '';   // current base code in panel
+var _panelRows = [];       // all version rows for current panel
+
+function splashStatus() {
+  document.getElementById('modal-estado').classList.add('open');
+  loadEstadoList();
+}
+function closeEstadoModal() {
+  document.getElementById('modal-estado').classList.remove('open');
+}
+function closePanelOferta() {
+  document.getElementById('panel-oferta').style.display = 'none';
+}
+
+async function loadEstadoList() {
+  var list = document.getElementById('estado-list');
+  list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">Cargando…</div>';
+  if(window.location.protocol === 'file:') {
+    list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#e67e22">⚠ Conecta a servidor para usar esta función.</div>';
+    return;
+  }
+  try {
+    var data = await sheetsRead('Historial','A2:R500');
+    _estadoAllRows = (data.values||[]).filter(function(r){return r[0]&&r[0].toString().trim();});
+    renderEstadoList(_estadoAllRows);
+  } catch(e) {
+    list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#c0392b">Error al cargar.</div>';
+  }
+}
+
+function renderEstadoList(rows) {
+  var list = document.getElementById('estado-list');
+  // Group by base code (without version)
+  var groups = {};
+  rows.forEach(function(r) {
+    var code = (r[0]||'').replace(/-V\d+$/,'');
+    if(!groups[code]) groups[code] = {code:code, cliente:r[1]||'', proyecto:r[2]||'', rows:[]};
+    groups[code].rows.push(r);
+  });
+  var grouped = Object.values(groups);
+  if(!grouped.length) {
+    list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#888">No hay ofertas.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  _estadoFiltered = grouped;
+  grouped.forEach(function(g) {
+    var lastRow = g.rows[g.rows.length-1];
+    var estado  = lastRow[7]||'—';
+    var total   = parseFloat(lastRow[5]||0);
+    var item = document.createElement('div');
+    item.className = 'pitem';
+    item.innerHTML =
+      '<div>' +
+        '<div class="pname">' + esc(g.code) + '</div>' +
+        '<div class="pmeta">' + esc(g.cliente) + (g.proyecto?' · '+esc(g.proyecto):'') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div style="font-size:12px;font-weight:700;color:#2C2C2C">' + fmtMoney(total) + '</div>' +
+        '<div style="font-size:10px;color:#888;margin-top:2px">' + esc(estado) + ' · ' + g.rows.length + ' ver.</div>' +
+      '</div>';
+    item.addEventListener('click', function(){ openPanelOferta(g); });
+    list.appendChild(item);
+  });
+}
+
+function filterEstadoList() {
+  var q = (document.getElementById('estado-search').value||'').toLowerCase().trim();
+  if(!q) { renderEstadoList(_estadoAllRows); return; }
+  var filtered = _estadoAllRows.filter(function(r){
+    return (r[0]||'').toLowerCase().includes(q) ||
+           (r[1]||'').toLowerCase().includes(q) ||
+           (r[2]||'').toLowerCase().includes(q);
+  });
+  renderEstadoList(filtered);
+}
+
+function openPanelOferta(g) {
+  _panelBaseCode = g.code;
+  _panelRows     = g.rows;
+  closeEstadoModal();
+
+  document.getElementById('panel-codigo').textContent = g.code;
+  document.getElementById('panel-info').textContent   = g.cliente + (g.proyecto?' — '+g.proyecto:'');
+
+  // Load resultado from last row cols S/T/U (indices 18,19,20)
+  var last = g.rows[g.rows.length-1];
+  var res  = last[18]||'Pendiente';
+  var resRadio = document.querySelector('input[name="resultado-final"][value="'+res+'"]');
+  if(resRadio) resRadio.checked = true;
+  document.getElementById('res-monto').value = last[19]||'';
+  document.getElementById('res-fecha').value  = last[20]||'';
+  document.getElementById('res-obs').value    = last[21]||'';
+
+  renderPanelVersiones(g.rows);
+  document.getElementById('panel-oferta').style.display = 'block';
+}
+
+function renderPanelVersiones(rows) {
+  var el = document.getElementById('panel-versiones');
+  el.innerHTML = '';
+  rows.forEach(function(r, idx) {
+    var ver    = (r[0]||'').match(/-V(\d+)$/);
+    var verStr = ver ? 'V'+ver[1] : 'V'+(idx+1);
+    var fecha  = fmtFecha(r[17]);
+    var total  = parseFloat(r[5]||0);
+    var estado = r[7]||'En elaboración';
+
+    var estadoColor = {
+      'En elaboración':'#e67e22',
+      'En revisión':'#3498db',
+      'Aprobada':'#27ae60',
+      'Enviada al cliente':'#8e44ad'
+    }[estado] || '#888';
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #f0f0f0;background:#fff';
+    row.innerHTML =
+      '<div style="font-size:13px;font-weight:800;color:#2C2C2C;min-width:32px">' + verStr + '</div>' +
+      '<div style="flex:1">' +
+        '<div style="font-size:11px;color:#888">' + (fecha||'—') + '</div>' +
+        '<div style="font-size:13px;font-weight:700;color:#2C2C2C">' + fmtMoney(total) + '</div>' +
+      '</div>' +
+      '<div style="min-width:120px">' +
+        '<span style="font-size:11px;font-weight:700;color:'+estadoColor+';background:'+estadoColor+'18;padding:3px 8px;border-radius:20px">' + esc(estado) + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px">' +
+        (estado==='En elaboración'||estado==='En revisión' ?
+          '<button class="btn btn-ghost btn-xs" onclick="aprobarVersion('+idx+')">✓ Aprobar</button>' : '') +
+        (estado==='Aprobada' ?
+          '<button class="btn btn-ghost btn-xs" onclick="enviarVersion('+idx+')">📤 Enviar</button>' : '') +
+        '<button class="btn btn-ghost btn-xs" onclick="verPDFVersion('+idx+')">👁 PDF</button>' +
+      '</div>';
+    el.appendChild(row);
+  });
+}
+
+async function cambiarEstadoVersion(rowIdx, nuevoEstado) {
+  var r = _panelRows[rowIdx];
+  // Find sheet row
+  try {
+    var data = await sheetsRead('Historial','A1:A500');
+    var codes = (data.values||[]).map(function(x){return (x[0]||'').trim();});
+    var sheetRow = codes.indexOf((r[0]||'').trim());
+    if(sheetRow < 0) { toast('⚠ Versión no encontrada en Sheets','warn'); return; }
+    // Update only column H (estado = index 7, col H = col 8)
+    await sheetsUpdate('Historial','H'+sheetRow+':H'+sheetRow,[[nuevoEstado]]);
+    _panelRows[rowIdx][7] = nuevoEstado;
+    renderPanelVersiones(_panelRows);
+    toast('✓ Estado actualizado: '+nuevoEstado,'ok');
+  } catch(e) {
+    toast('⚠ Error: '+e.message,'warn');
+    console.error(e);
+  }
+}
+
+function aprobarVersion(rowIdx) {
+  cambiarEstadoVersion(rowIdx, 'Aprobada');
+}
+function enviarVersion(rowIdx) {
+  cambiarEstadoVersion(rowIdx, 'Enviada al cliente');
+}
+
+function verPDFVersion(rowIdx) {
+  var r = _panelRows[rowIdx];
+  // Load FRI + rows from this version and generate PDF
+  try {
+    var friData = JSON.parse(r[14]||'{}');
+    var itemsData = JSON.parse(r[8]||'[]');
+    var notesData = JSON.parse(r[9]||'[]');
+    var savedPropCode = r[0]||'';
+
+    // Temporarily set global state
+    var prevCode  = propCode;
+    var prevRows  = rows;
+    var prevNotes = notes;
+    propCode = savedPropCode;
+    rows     = itemsData;
+    notes    = notesData;
+
+    // Generate PDF
+    renderPDF(true).then(function(){
+      // Restore state
+      propCode = prevCode;
+      rows     = prevRows;
+      notes    = prevNotes;
+    });
+  } catch(e) {
+    toast('⚠ Error al generar PDF: '+e.message,'warn');
+    console.error(e);
+  }
+}
+
+async function guardarResultado() {
+  var resultado = (document.querySelector('input[name="resultado-final"]:checked')||{}).value||'Pendiente';
+  var monto     = document.getElementById('res-monto').value||'';
+  var fecha     = document.getElementById('res-fecha').value||'';
+  var obs       = document.getElementById('res-obs').value||'';
+
+  if(window.location.protocol==='file:') {
+    toast('⚠ Solo funciona en servidor web','warn'); return;
+  }
+  try {
+    // Update all versions of this base code with resultado in cols S-V
+    var data = await sheetsRead('Historial','A1:A500');
+    var codes = (data.values||[]).map(function(x){return (x[0]||'').trim();});
+    // Update last version row (highest version number)
+    var lastRow = _panelRows[_panelRows.length-1];
+    var sheetRow = codes.indexOf((lastRow[0]||'').trim());
+    if(sheetRow >= 0) {
+      await sheetsUpdate('Historial','S'+sheetRow+':V'+sheetRow,[[resultado,monto,fecha,obs]]);
+      // Update local cache
+      _panelRows[_panelRows.length-1][18] = resultado;
+      _panelRows[_panelRows.length-1][19] = monto;
+      _panelRows[_panelRows.length-1][20] = fecha;
+      _panelRows[_panelRows.length-1][21] = obs;
+      toast('✓ Resultado guardado: '+resultado,'ok');
+    }
+  } catch(e) {
+    toast('⚠ Error: '+e.message,'warn');
+    console.error(e);
+  }
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('input[name="tipo-cliente"]').forEach(function(radio){
     radio.addEventListener('change',function(){var btn=document.getElementById('btn-buscar-cliente');if(btn)btn.style.display=this.value==='Recurrente'?'':'none';});
   });
-  var btnNew   = document.getElementById('btn-new');
+  var btnNew    = document.getElementById('btn-new');
+  var btnStatus = document.getElementById('btn-status');
+  if(btnStatus) btnStatus.addEventListener('click', splashStatus);
   var btnCont  = document.getElementById('btn-continue');
   var btnReuse = document.getElementById('btn-reuse');
   if(btnNew)   btnNew.addEventListener('click',   splashNew);
