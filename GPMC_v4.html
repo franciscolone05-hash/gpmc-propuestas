@@ -3218,7 +3218,7 @@ async function loadEstadoList() {
   }
   try {
     var data = await sheetsRead('Historial','A2:R500');
-    _estadoAllRows = (data.values||[]).filter(function(r){return r[0]&&r[0].toString().trim();});
+    _estadoAllRows = (data.values||[]).filter(function(r){ var c=(r[0]||'').toString().trim(); return c && c.toUpperCase()!=='CODIGO' && /GPMC/i.test(c); });
     renderEstadoList(_estadoAllRows);
   } catch(e) {
     list.innerHTML = '<div class="pmeta" style="padding:20px;text-align:center;color:#c0392b">Error al cargar.</div>';
@@ -3253,8 +3253,8 @@ function renderEstadoList(rows) {
         '<div class="pmeta">' + esc(g.cliente) + (g.proyecto?' · '+esc(g.proyecto):'') + '</div>' +
       '</div>' +
       '<div style="text-align:right">' +
-        '<div style="font-size:12px;font-weight:700;color:#2C2C2C">' + fmtMoney(total) + '</div>' +
-        '<div style="font-size:10px;color:#888;margin-top:2px">' + esc(estado) + ' · ' + g.rows.length + ' ver.</div>' +
+        '<div style="font-size:12px;font-weight:700;color:#fff">' + fmtMoney(total) + '</div>' +
+        '<div class="pmeta" style="margin-top:2px">' + esc(estado) + ' · ' + g.rows.length + ' ver.</div>' +
       '</div>';
     item.addEventListener('click', function(){ openPanelOferta(g); });
     list.appendChild(item);
