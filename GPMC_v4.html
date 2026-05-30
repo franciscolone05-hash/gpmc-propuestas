@@ -3548,12 +3548,15 @@ async function guardarResultado() {
     if(foundRow < 0) { toast('⚠ Propuesta no encontrada en Sheets','warn'); return; }
 
     // Write each column individually to avoid range issues
-    console.log('[GPMC] writing S'+foundRow);
-    await sheetsUpdate('Historial','S'+foundRow+':S'+foundRow,[[resultado]]);
-    await sheetsUpdate('Historial','T'+foundRow+':T'+foundRow,[[monto]]);
-    await sheetsUpdate('Historial','U'+foundRow+':U'+foundRow,[[fecha]]);
-    await sheetsUpdate('Historial','V'+foundRow+':V'+foundRow,[[obs]]);
-    await sheetsUpdate('Historial','W'+foundRow+':W'+foundRow,[[lecJSON]]);
+    console.log('[GPMC] writing S'+foundRow+' lecJSON='+lecJSON);
+    var r1=await sheetsUpdate('Historial','S'+foundRow+':S'+foundRow,[[resultado]]);
+    console.log('[GPMC] S done',r1.error||'ok');
+    var r2=await sheetsUpdate('Historial','T'+foundRow+':T'+foundRow,[[monto]]);
+    var r3=await sheetsUpdate('Historial','U'+foundRow+':U'+foundRow,[[fecha]]);
+    var r4=await sheetsUpdate('Historial','V'+foundRow+':V'+foundRow,[[obs]]);
+    console.log('[GPMC] writing W lecciones count='+_lecciones.length);
+    var r5=await sheetsUpdate('Historial','W'+foundRow+':W'+foundRow,[[lecJSON]]);
+    console.log('[GPMC] W done',r5.error||'ok',r5);
 
     // Update local caches
     lastRow[18]=resultado; lastRow[19]=monto; lastRow[20]=fecha;
