@@ -476,6 +476,7 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="generarMCV()" style="font-size:11px;color:#fff;border-color:rgba(255,255,255,.4)">📄 Descargar MCV</button>
+        <button class="btn btn-ghost btn-sm" onclick="generarBBDD()" style="font-size:11px;color:#fff;border-color:rgba(255,255,255,.4)">🗄 Descargar BBDD</button>
         <button onclick="closePanelOferta()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
       </div>
     </div>
@@ -4078,6 +4079,245 @@ function agregarLeccion() {
 function eliminarLeccion(i) {
   _lecciones.splice(i, 1);
   renderLecciones();
+}
+
+// ═══════════════════════════════════════════════════════
+// BBDD PDF — Base de Datos de Propuestas (Anexo 9)
+// ═══════════════════════════════════════════════════════
+async function generarBBDD() {
+  await loadPDFAssets();
+
+  var doc = new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'letter'});
+  var PW=792, PH=612, ML=28, MR=28, MT=20, MB=20, CW=PW-ML-MR;
+
+  var C_RED=[192,0,0], C_DARK=[44,44,44], C_LBL=[230,235,242];
+  var C_WHITE=[255,255,255], C_BORD=[160,168,185], C_TXT=[30,30,30];
+  var C_LTXT=[75,85,100], C_FOOT=[240,242,246], C_GRP=[60,70,90];
+  var C_ALT=[248,249,252];
+
+  function setF(style,sz,color){
+    doc.setFont('helvetica',style||'normal'); doc.setFontSize(sz||8);
+    var c=color||C_TXT; doc.setTextColor(c[0],c[1],c[2]);
+  }
+  function setBorder(c){ var b=c||C_BORD; doc.setDrawColor(b[0],b[1],b[2]); doc.setLineWidth(0.4); }
+  function fillRect(x,y,w,h,c){ doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,h,'F'); }
+  function fillStroke(x,y,w,h,fill){ fillRect(x,y,w,h,fill); setBorder(); doc.rect(x,y,w,h,'S'); }
+  function cell(text,x,y,w,h,fill,bold,align){
+    fillStroke(x,y,w,h,fill||C_WHITE);
+    if(text!==undefined && text!==null && text!==''){
+      setF(bold?'bold':'normal',7,fill===C_DARK||fill===C_GRP?[255,255,255]:C_TXT);
+      var lines=doc.splitTextToSize(String(text),w-6);
+      var ty = align==='center' ? y+h/2+2.5 : y+h/2+2.5;
+      doc.text(lines, align==='center'?x+w/2:x+4, ty,
+        {align:align==='center'?'center':'left', maxWidth:w-6});
+    }
+  }
+  function sectionHdr(label,y){
+    fillRect(ML,y,CW,14,C_DARK); setBorder(C_DARK); doc.rect(ML,y,CW,14,'S');
+    setF('bold',9,[255,255,255]); doc.text(label,ML+6,y+10);
+    return y+14;
+  }
+  function moduleHdr(label,y){
+    fillRect(ML,y,CW,13,C_GRP); setBorder(); doc.rect(ML,y,CW,13,'S');
+    setF('bold',8,[200,210,230]); doc.text(label,ML+6,y+9.5);
+    return y+13;
+  }
+
+  // ── Page header ─────────────────────────────────────
+  function drawHeader(){
+    fillRect(0,0,PW,5,C_RED);
+    var HY=MT, LOGO_W=80, TITLE_W=160, INFO_W=CW-LOGO_W-TITLE_W;
+    var ROW1H=28, ROW2H=16;
+    fillStroke(ML,HY,LOGO_W,ROW1H+ROW2H,C_WHITE);
+    if(PDF_LOGO){ var lh=22,lw=Math.round(lh/0.421); if(lw>LOGO_W-4)lw=LOGO_W-4;
+      try{doc.addImage(PDF_LOGO,'PNG',ML+(LOGO_W-lw)/2,HY+(ROW1H+ROW2H-lh)/2,lw,lh);}catch(e){} }
+    fillRect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,C_DARK);
+    setBorder(C_DARK); doc.rect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,'S');
+    setF('bold',9,[255,255,255]);
+    doc.text('BASE DE DATOS DE PROPUESTAS',ML+LOGO_W+5,HY+12);
+    doc.text('BBDD — Anexo 9',ML+LOGO_W+5,HY+22);
+    var IX=ML+LOGO_W+TITLE_W, cellW=INFO_W/3;
+    var fri2=typeof getFRIData==='function'?getFRIData():{};
+    var d=new Date();
+    var fechaHoy=d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+    var filled=['GPMC',fechaHoy,'v1.0'];
+    ['Empresa:','Fecha:','Version:'].forEach(function(lab,i){
+      fillStroke(IX+i*cellW,HY,cellW,ROW1H,C_LBL);
+      setF('bold',6.5,C_LTXT); doc.text(lab,IX+i*cellW+3,HY+8);
+      setF('normal',7.5,C_TXT); doc.text(filled[i],IX+i*cellW+3,HY+20);
+    });
+    var compW=LOGO_W+TITLE_W+cellW*2;
+    fillStroke(ML,HY+ROW1H,compW,ROW2H,[248,249,252]);
+    setF('normal',7,C_LTXT);
+    doc.text('Grupo Proyectos Multiples de Construccion S.A. de C.V.',ML+LOGO_W+4,HY+ROW1H+11);
+    var EX=ML+compW;
+    fillStroke(EX,HY+ROW1H,cellW,ROW2H,C_LBL);
+    setF('bold',6.5,C_LTXT); doc.text('Generado:',EX+3,HY+ROW1H+7);
+    setF('normal',7,C_TXT); doc.text(fechaHoy,EX+3,HY+ROW1H+15);
+  }
+
+  drawHeader();
+  var y=MT+50;
+
+  // ══════════════════════════════════════════════════════
+  // MÓDULO 1 — HISTORIAL DE PROPUESTAS
+  // ══════════════════════════════════════════════════════
+  y=sectionHdr('MÓDULO 1 — Historial de propuestas',y);
+
+  // Column definitions for landscape
+  var RH=18; // row height
+  var COL={
+    cod:ML,      codW:85,
+    cli:0,       cliW:90,
+    proy:0,      proyW:110,
+    total:0,     totalW:60,
+    fecha:0,     fechaW:54,
+    vers:0,      versW:30,
+    estado:0,    estadoW:68,
+    resultado:0, resultadoW:62,
+    monto:0,     montoW:62,
+    resp:0,      respW:75,
+  };
+  // Calculate x positions
+  COL.cli     = COL.cod+COL.codW;
+  COL.proy    = COL.cli+COL.cliW;
+  COL.total   = COL.proy+COL.proyW;
+  COL.fecha   = COL.total+COL.totalW;
+  COL.vers    = COL.fecha+COL.fechaW;
+  COL.estado  = COL.vers+COL.versW;
+  COL.resultado=COL.estado+COL.estadoW;
+  COL.monto   = COL.resultado+COL.resultadoW;
+  COL.resp    = COL.monto+COL.montoW;
+
+  // Header row
+  var hdrRH = 20;
+  var hdrs=[
+    ['CÓDIGO',COL.cod,COL.codW],['CLIENTE',COL.cli,COL.cliW],
+    ['PROYECTO',COL.proy,COL.proyW],['TOTAL',COL.total,COL.totalW],
+    ['FECHA GUARD.',COL.fecha,COL.fechaW],['VER.',COL.vers,COL.versW],
+    ['ESTADO',COL.estado,COL.estadoW],['RESULTADO',COL.resultado,COL.resultadoW],
+    ['MONTO ADJ.',COL.monto,COL.montoW],['RESPONSABLE',COL.resp,COL.respW]
+  ];
+  hdrs.forEach(function(h){
+    cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center');
+  });
+  y+=hdrRH;
+
+  // Data rows from _panelRows if available, else try all rows
+  var dataRows = [];
+  if(typeof _estadoAllRows !== 'undefined' && _estadoAllRows.length) {
+    dataRows = _estadoAllRows;
+  }
+
+  if(!dataRows.length){
+    cell('No hay datos de Historial cargados. Abre "Estado de ofertas" primero.',ML,y,CW,RH*2,C_WHITE);
+    y+=RH*2;
+  } else {
+    dataRows.forEach(function(r,i){
+      var friD={}; try{friD=JSON.parse(r[14]||'{}');}catch(e){}
+      var bg = i%2===0?C_WHITE:C_ALT;
+      var cols2=[
+        [r[0]||'',COL.cod,COL.codW],
+        [r[1]||'',COL.cli,COL.cliW],
+        [r[2]||friD.proyecto||'',COL.proy,COL.proyW],
+        [r[5]?'$'+parseFloat(r[5]).toFixed(2):'',COL.total,COL.totalW],
+        [fmtFecha(r[17]),COL.fecha,COL.fechaW],
+        [(r[0]||'').replace(/^.*-(V\d+)$/,'$1')||'V1',COL.vers,COL.versW],
+        [r[7]||'',COL.estado,COL.estadoW],
+        [r[18]||'Pendiente',COL.resultado,COL.resultadoW],
+        [r[19]?'$'+r[19]:'',COL.monto,COL.montoW],
+        [friD.recibidoPor||'',COL.resp,COL.respW]
+      ];
+      cols2.forEach(function(c){ cell(c[0],c[1],y,c[2],RH,bg); });
+      y+=RH;
+      if(y > PH-60) { // new page
+        doc.addPage();
+        fillRect(0,0,PW,5,C_RED);
+        y=MT+10;
+        hdrs.forEach(function(h){ cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center'); });
+        y+=hdrRH;
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════════════════
+  // MÓDULO 2 — CATÁLOGO DE COSTOS UNITARIOS
+  // ══════════════════════════════════════════════════════
+  // New page for module 2
+  doc.addPage();
+  fillRect(0,0,PW,5,C_RED);
+  drawHeader();
+  y=MT+50;
+
+  y=sectionHdr('MÓDULO 2 — Catálogo de costos unitarios',y);
+
+  var C2={
+    desc:ML,  descW:220,
+    unit:0,   unitW:45,
+    costo:0,  costoW:65,
+    cat:0,    catW:90,
+    prov:0,   provW:130,
+    notas:0,  notasW:0,
+  };
+  C2.unit  = C2.desc+C2.descW;
+  C2.costo = C2.unit+C2.unitW;
+  C2.cat   = C2.costo+C2.costoW;
+  C2.prov  = C2.cat+C2.catW;
+  C2.notas = C2.prov+C2.provW;
+  C2.notasW= ML+CW-C2.notas;
+
+  var hdrs2=[
+    ['DESCRIPCIÓN',C2.desc,C2.descW],['UNIDAD',C2.unit,C2.unitW],
+    ['COSTO UNIT.',C2.costo,C2.costoW],['CATEGORÍA',C2.cat,C2.catW],
+    ['PROVEEDOR',C2.prov,C2.provW],['NOTAS',C2.notas,C2.notasW]
+  ];
+  hdrs2.forEach(function(h){ cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center'); });
+  y+=hdrRH;
+
+  var catData = typeof _catalogoItems!=='undefined'&&_catalogoItems.length
+    ? _catalogoItems
+    : (typeof _gestionCatItems!=='undefined'&&_gestionCatItems.length ? _gestionCatItems : []);
+
+  if(!catData.length){
+    cell('No hay ítems en el catálogo cargados. Abre "Catálogo" primero.',ML,y,CW,RH*2,C_WHITE);
+    y+=RH*2;
+  } else {
+    catData.forEach(function(r,i){
+      var bg=i%2===0?C_WHITE:C_ALT;
+      var margen=typeof _catalogoMargen!=='undefined'?_catalogoMargen:0.35;
+      var costo=parseFloat(r[3]||0);
+      var precioV=costo*(1+margen);
+      [
+        [r[1]||'',C2.desc,C2.descW],
+        [r[2]||'',C2.unit,C2.unitW],
+        ['$'+costo.toFixed(2)+' / $'+precioV.toFixed(2),C2.costo,C2.costoW],
+        [r[5]||'',C2.cat,C2.catW],
+        [r[4]||'',C2.prov,C2.provW],
+        [r[6]||'',C2.notas,C2.notasW]
+      ].forEach(function(c){ cell(c[0],c[1],y,c[2],RH,bg); });
+      y+=RH;
+      if(y>PH-50){
+        doc.addPage();
+        fillRect(0,0,PW,5,C_RED);
+        y=MT+10;
+        hdrs2.forEach(function(h){ cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center'); });
+        y+=hdrRH;
+      }
+    });
+  }
+
+  // ── Footer ──────────────────────────────────────────
+  var footY=PH-30;
+  fillRect(0,footY-4,PW,34,[255,255,255]);
+  fillStroke(ML,footY,CW,16,C_FOOT);
+  setF('italic',6.5,[100,110,130]);
+  doc.text('\u2605  Costos unitarios: costo base / precio venta (con '+Math.round((typeof _catalogoMargen!=='undefined'?_catalogoMargen:0.35)*100)+'% de margen). Actualizar trimestralmente o ante variación >5%.',ML+5,footY+11,{maxWidth:CW-10});
+  fillRect(0,PH-8,PW,8,C_RED);
+  setF('normal',6.5,[120,120,120]);
+  doc.text('GPMC S.A. de C.V. \u2014 Base de Datos de Propuestas (BBDD) \u2014 Anexo 9',PW/2,PH-2,{align:'center'});
+
+  doc.save('GPMC_BBDD_'+new Date().toISOString().slice(0,10)+'.pdf');
+  toast('\u2713 BBDD descargada','ok');
 }
 
 window.addEventListener('DOMContentLoaded', function() {
