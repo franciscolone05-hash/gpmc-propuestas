@@ -469,13 +469,33 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
         <div id="panel-codigo" style="font-size:13px;font-weight:800;color:#fff;letter-spacing:.5px"></div>
         <div id="panel-info" style="font-size:11px;color:#aaa;margin-top:3px"></div>
       </div>
-      <button onclick="closePanelOferta()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="generarMCV()" style="font-size:11px">📄 Descargar MCV</button>
+        <button onclick="closePanelOferta()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+      </div>
     </div>
 
     <div style="padding:24px 28px">
       <!-- Versiones -->
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:.8px;margin-bottom:10px">Versiones</div>
       <div id="panel-versiones" style="border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;margin-bottom:24px"></div>
+
+      <!-- Estados posibles (leyenda) -->
+      <details style="margin-bottom:16px;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden">
+        <summary style="padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:.8px;cursor:pointer;background:#f8f9fb;list-style:none">
+          ℹ️ Estados posibles <span style="font-weight:400;text-transform:none;letter-spacing:0">(referencia)</span>
+        </summary>
+        <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <tr style="background:#f0f2f5">
+            <th style="padding:6px 12px;text-align:left;color:#555;width:130px">Estado</th>
+            <th style="padding:6px 12px;text-align:left;color:#555">Descripción</th>
+          </tr>
+          <tr><td style="padding:6px 12px;font-weight:700;color:#e67e22">En elaboración</td><td style="padding:6px 12px;color:#555">La propuesta está siendo preparada por el personal técnico, aún no ha sido revisada.</td></tr>
+          <tr style="background:#f8f9fb"><td style="padding:6px 12px;font-weight:700;color:#3498db">En revisión</td><td style="padding:6px 12px;color:#555">El Checklist de Validación fue completado. La propuesta fue enviada a revisión gerencial.</td></tr>
+          <tr><td style="padding:6px 12px;font-weight:700;color:#27ae60">Aprobada</td><td style="padding:6px 12px;color:#555">La propuesta fue aprobada por el Gerente General. Lista para envío al cliente.</td></tr>
+          <tr style="background:#f8f9fb"><td style="padding:6px 12px;font-weight:700;color:#8e44ad">Enviada al cliente</td><td style="padding:6px 12px;color:#555">Versión final enviada. La propuesta fue registrada en la Base de Datos de Propuestas (BBDD).</td></tr>
+        </table>
+      </details>
 
       <!-- Resultado final -->
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#888;letter-spacing:.8px;margin-bottom:12px">Resultado final</div>
@@ -825,16 +845,7 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
           <textarea id="f-obs-comerciales"
             placeholder="Cambios respecto a proyectos anteriores, preferencias del cliente…"></textarea>
         </div>
-        <div class="form-grid">
-          <div class="field">
-            <label>Elaborado por / Fecha</label>
-            <input id="f-elaborado-por" type="text" placeholder="Nombre del técnico responsable">
-          </div>
-          <div class="field">
-            <label>Revisado por / Fecha</label>
-            <input id="f-revisado-por" type="text" placeholder="Nombre del revisor">
-          </div>
-        </div>
+        
       </div>
     </div>
 
@@ -1446,7 +1457,7 @@ function clearForm() {
     'f-alcance','f-ubicacion','f-condiciones-sitio','f-materiales','f-normativas',
     'f-acabados','f-fecha-entrega','f-fecha-inicio','f-ejecucion','f-vigencia',
     'f-presupuesto-ref','f-prop-anteriores','f-obs-comerciales',
-    'f-elaborado-por','f-revisado-por','f-pago-obs'];
+    'f-pago-obs'];
   ids.forEach(function(id) { sv(id,''); });
   var pagoSel = document.getElementById('f-pago');
   if(pagoSel) pagoSel.selectedIndex = 0;
@@ -1490,8 +1501,7 @@ function getFRIData() {
     prioridad:    grv('prioridad'),
     propAnt:      gv('f-prop-anteriores'),
     obsComerciales: gv('f-obs-comerciales'),
-    elaboradoPor: gv('f-elaborado-por'),
-    revisadoPor:  gv('f-revisado-por'),
+
   };
 }
 
@@ -1521,8 +1531,7 @@ function setFRIData(d) {
   sv('f-presupuesto-ref',d.presRef||'');
   sv('f-prop-anteriores',d.propAnt||'');
   sv('f-obs-comerciales',d.obsComerciales||'');
-  sv('f-elaborado-por',  d.elaboradoPor||'');
-  sv('f-revisado-por',   d.revisadoPor||'');
+
   if(d.tipoCliente) srV('tipo-cliente', d.tipoCliente);
   if(d.tipoProy)    srV('tipo-proy', d.tipoProy);
   if(d.prioridad)   srV('prioridad', d.prioridad);
@@ -2121,6 +2130,15 @@ function setCVAnswer(n, ans) {
   updateCVResult();
 }
 function updateCVResult() {
+  // Auto-advance state to "En revisión" when all criteria answered
+  var answered = Object.keys(cvAnswers).length;
+  if(answered >= 15) {
+    var estadoEl = document.getElementById('f-estado');
+    if(estadoEl && estadoEl.value === 'En elaboración') {
+      estadoEl.value = 'En revisión';
+      toast('Estado actualizado a En revisión ✓','ok');
+    }
+  }
   var total = 15, answered = 0, failed = 0;
   for(var i=1;i<=total;i++) {
     if(cvAnswers[i]) answered++;
@@ -3424,6 +3442,194 @@ async function guardarResultado() {
     toast('⚠ Error: '+e.message,'warn');
     console.error(e);
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// MCV PDF — Matriz de Control de Versiones (Anexo 3)
+// ═══════════════════════════════════════════════════════
+async function generarMCV() {
+  await loadPDFAssets();
+  if(!_panelRows||!_panelRows.length){ toast('⚠ Selecciona una oferta primero','warn'); return; }
+
+  var doc = new window.jspdf.jsPDF({orientation:'portrait',unit:'pt',format:'letter'});
+  var PW=612,PH=792,ML=36,MR=36,MT=24,MB=28,CW=540;
+  var C_RED=[192,0,0], C_DARK=[44,44,44], C_LBL=[230,235,242], C_WHITE=[255,255,255];
+  var C_BORD=[160,168,185], C_TXT=[30,30,30], C_LTXT=[75,85,100], C_FOOT=[240,242,246];
+  var C_GRP=[60,70,90];
+
+  function setF(style,sz,color){
+    doc.setFont('helvetica',style||'normal'); doc.setFontSize(sz||8);
+    var c=color||C_TXT; doc.setTextColor(c[0],c[1],c[2]);
+  }
+  function setBorder(c){ var bc=c||C_BORD; doc.setDrawColor(bc[0],bc[1],bc[2]); doc.setLineWidth(0.5); }
+  function fillRect(x,y,w,h,c){ doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,h,'F'); }
+  function fillStroke(x,y,w,h,fill){ fillRect(x,y,w,h,fill); setBorder(); doc.rect(x,y,w,h,'S'); }
+  function lbl(text,x,y,w,h){ fillStroke(x,y,w,h,C_LBL); setF('bold',7.5,C_LTXT); doc.text(text,x+5,y+h/2+2.5); }
+  function valCell(text,x,y,w,h){ fillStroke(x,y,w,h,C_WHITE); if(text){setF('normal',8,C_TXT);doc.text(String(text),x+5,y+h/2+2.5,{maxWidth:w-8});} }
+  function halfRow(l1,v1,l2,v2,y,h,HL){ h=h||20;HL=HL||110; var HW=CW/2;
+    lbl(l1,ML,y,HL,h); valCell(v1,ML+HL,y,HW-HL,h);
+    lbl(l2,ML+HW,y,HL,h); valCell(v2,ML+HW+HL,y,HW-HL,h); return y+h; }
+  function fullRow(label,value,y,h,LW){ h=h||20;LW=LW||110;
+    lbl(label,ML,y,LW,h); valCell(value,ML+LW,y,CW-LW,h); return y+h; }
+  function sectionHdr(label,y){ fillRect(ML,y,CW,15,C_DARK); setBorder(C_DARK); doc.rect(ML,y,CW,15,'S');
+    setF('bold',8.5,[255,255,255]); doc.text(label,ML+6,y+11); return y+15; }
+  function chk(checked,x,y){ setBorder(C_DARK); doc.setLineWidth(0.6); doc.rect(x,y-6,7,7,'S');
+    if(checked){ doc.setDrawColor(C_RED[0],C_RED[1],C_RED[2]); doc.setLineWidth(1);
+      doc.line(x+1,y-5,x+6,y); doc.line(x+6,y-5,x+1,y); } }
+
+  // ── Page header (same as FRI/CV) ─────────────────────
+  function drawHeader(){
+    fillRect(0,0,PW,5,C_RED);
+    var HY=MT, LOGO_W=90, TITLE_W=180, INFO_W=CW-LOGO_W-TITLE_W;
+    var ROW1H=32, ROW2H=18;
+    fillStroke(ML,HY,LOGO_W,ROW1H+ROW2H,C_WHITE);
+    if(PDF_LOGO){ var lh=26,lw=Math.round(lh/0.421); if(lw>LOGO_W-4)lw=LOGO_W-4;
+      try{doc.addImage(PDF_LOGO,'PNG',ML+(LOGO_W-lw)/2,HY+(ROW1H+ROW2H-lh)/2,lw,lh);}catch(e){} }
+    fillRect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,C_DARK);
+    setBorder(C_DARK); doc.rect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,'S');
+    setF('bold',10,[255,255,255]);
+    doc.text('MATRIZ DE CONTROL',ML+LOGO_W+6,HY+14);
+    doc.text('DE VERSIONES',ML+LOGO_W+6,HY+26);
+    var IX=ML+LOGO_W+TITLE_W, cellW=INFO_W/3;
+    var fri2=typeof getFRIData==='function'?getFRIData():{};
+    var filled=[_panelBaseCode||'MCV-____','V1.0',fri2.fechaSolicitud||'__/__/____'];
+    ['Codigo:','Version:','Fecha:'].forEach(function(lab,i){
+      fillStroke(IX+i*cellW,HY,cellW,ROW1H,C_LBL);
+      setF('bold',7,C_LTXT); doc.text(lab,IX+i*cellW+4,HY+9);
+      setF('normal',8,C_TXT); doc.text(filled[i],IX+i*cellW+4,HY+22);
+    });
+    var compW=LOGO_W+TITLE_W+cellW*2;
+    fillStroke(ML,HY+ROW1H,compW,ROW2H,[248,249,252]);
+    setF('normal',7.5,C_LTXT);
+    doc.text('Grupo Proyectos Multiples de Construccion S.A. de C.V.',ML+LOGO_W+4,HY+ROW1H+12);
+    var EX=ML+compW;
+    fillStroke(EX,HY+ROW1H,cellW,ROW2H,C_LBL);
+    setF('bold',7,C_LTXT); doc.text('Estado:',EX+4,HY+ROW1H+8);
+    fillRect(EX+4,HY+ROW1H+9,cellW-8,ROW2H-10,C_RED);
+    setF('bold',6,[255,255,255]);
+    var lastEstado=(_panelRows[_panelRows.length-1]||[])[7]||'En elaboracion';
+    doc.text(lastEstado,EX+6,HY+ROW1H+ROW2H-4,{maxWidth:cellW-10});
+  }
+
+  drawHeader();
+  var y=MT+56;
+
+  // ── IDENTIFICACIÓN ────────────────────────────────────
+  y=sectionHdr('IDENTIFICACION DE LA PROPUESTA',y);
+  var last=_panelRows[_panelRows.length-1]||[];
+  var friData={};
+  try{ friData=JSON.parse(last[14]||'{}'); }catch(e){}
+  y=halfRow('Codigo de propuesta:',_panelBaseCode,'Cliente:',last[1]||'',y,20,140);
+  y=halfRow('Tipo de proyecto:',friData.tipoProy||'','Personal tecnico asignado:',friData.elaboradoPor||friData.recibidoPor||'',y,20,140);
+
+  // ── REGISTRO DE VERSIONES ─────────────────────────────
+  y+=4; y=sectionHdr('REGISTRO DE VERSIONES',y);
+
+  // Table header
+  var cols={ver:36,fecha:60,resp:80,cambios:214,motivo:80,estado:70};
+  var hh=16;
+  fillRect(ML,y,CW,hh,C_GRP); setBorder(); doc.rect(ML,y,CW,hh,'S');
+  setF('bold',7,[200,210,230]);
+  var cx=ML;
+  [['Version',cols.ver],['Fecha',cols.fecha],['Responsable',cols.resp],
+   ['Cambios realizados',cols.cambios],['Motivo',cols.motivo],['Estado',cols.estado]
+  ].forEach(function(col){
+    doc.text(col[0],cx+3,y+11); cx+=col[0]==='Version'?cols.ver:col[1];
+    if(cx<ML+CW) doc.line(cx,y,cx,y+hh);
+  });
+  y+=hh;
+
+  // Version rows
+  _panelRows.forEach(function(r,i){
+    var ver=(r[0]||'').match(/-V(\d+)$/); var verStr=ver?'V'+ver[1]:'V'+(i+1);
+    var fecha=fmtFecha(r[17])||'';
+    var resp=friData.elaboradoPor||friData.recibidoPor||'';
+    var cambios=i===0?'Elaboracion inicial completa':'Modificacion v'+(i+1);
+    var motivo=i===0?'Primera version':'Ajuste solicitado';
+    var estado=r[7]||'En elaboracion';
+    var rh=22;
+    var bg=i%2===0?C_WHITE:[248,249,252];
+    fillRect(ML,y,CW,rh,bg); setBorder(); doc.rect(ML,y,CW,rh,'S');
+    setF('normal',7.5,C_TXT);
+    var dx=ML;
+    var cells=[[verStr,cols.ver],[fecha,cols.fecha],[resp,cols.resp],
+               [cambios,cols.cambios],[motivo,cols.motivo],[estado,cols.estado]];
+    cells.forEach(function(cell){
+      doc.text(cell[0],dx+3,y+rh/2+3,{maxWidth:cell[1]-6});
+      dx+=cell[1];
+      if(dx<ML+CW){setBorder();doc.line(dx,y,dx,y+rh);}
+    });
+    y+=rh;
+  });
+
+  // ── ESTADOS POSIBLES ──────────────────────────────────
+  y+=6; y=sectionHdr('ESTADOS POSIBLES',y);
+  // Mini header
+  var COL_E=120, COL_D=CW-COL_E;
+  fillRect(ML,y,COL_E,14,C_GRP); fillRect(ML+COL_E,y,COL_D,14,C_GRP);
+  setBorder(); doc.rect(ML,y,CW,14,'S'); doc.line(ML+COL_E,y,ML+COL_E,y+14);
+  setF('bold',7,[200,210,230]);
+  doc.text('Estado',ML+4,y+10); doc.text('Descripcion',ML+COL_E+4,y+10);
+  y+=14;
+  var estados=[
+    ['En elaboracion','La propuesta esta siendo preparada por el personal tecnico, aun no ha sido revisada.'],
+    ['En revision','El Checklist de Validacion fue completado. La propuesta fue enviada a revision gerencial.'],
+    ['Aprobada','La propuesta fue aprobada por el Gerente General. Lista para envio al cliente.'],
+    ['Enviada al cliente','Version final enviada. La propuesta fue registrada en la Base de Datos de Propuestas (BBDD).']
+  ];
+  estados.forEach(function(e,i){
+    var rh=18; var bg=i%2===0?C_WHITE:[248,249,252];
+    fillRect(ML,y,CW,rh,bg); setBorder(); doc.rect(ML,y,CW,rh,'S');
+    doc.line(ML+COL_E,y,ML+COL_E,y+rh);
+    setF('bold',7.5,C_LTXT); doc.text(e[0],ML+4,y+12);
+    setF('normal',7.5,C_TXT); doc.text(e[1],ML+COL_E+4,y+12,{maxWidth:COL_D-8});
+    y+=rh;
+  });
+
+  // ── RESULTADO FINAL ───────────────────────────────────
+  y+=6; y=sectionHdr('RESULTADO FINAL',y);
+  var res=last[18]||'Pendiente de respuesta';
+  var monto=last[19]||'';
+  var fechaRes=last[20]||'';
+  var obs=last[21]||'';
+
+  // Resultado checkboxes
+  lbl('Resultado:',ML,y,80,20);
+  fillStroke(ML+80,y,CW-80,20,C_WHITE);
+  var rx=ML+88, ry=y+13;
+  ['Adjudicada','No adjudicada','Pendiente de respuesta'].forEach(function(opt){
+    chk(res===opt,rx,ry); setF('normal',7.5,C_TXT); doc.text(opt,rx+10,ry);
+    rx+=10+doc.getTextWidth(opt)+16;
+  });
+  y+=20;
+  y=halfRow('Monto adjudicado:',monto?'$'+monto:'','Fecha de adjudicacion:',fechaRes,y,20,130);
+  y=fullRow('Observaciones finales:',obs,y,obs?28:20,130);
+
+  // ── FIRMAS ────────────────────────────────────────────
+  y+=12;
+  var FW=(CW-30)/2;
+  fillStroke(ML,y,FW,52,C_WHITE);
+  doc.setDrawColor(C_DARK[0],C_DARK[1],C_DARK[2]); doc.setLineWidth(0.6);
+  doc.line(ML+10,y+38,ML+FW-10,y+38);
+  setF('bold',7,C_LTXT); doc.text('Personal tecnico / Responsable de la propuesta',ML+6,y+48);
+
+  fillStroke(ML+FW+30,y,FW,52,C_WHITE);
+  doc.line(ML+FW+40,y+38,ML+FW*2+20,y+38);
+  setF('bold',7,C_LTXT); doc.text('Gerente General / Aprobacion final',ML+FW+36,y+48);
+  y+=62;
+
+  // ── FOOTER ────────────────────────────────────────────
+  var footY=PH-46;
+  fillRect(0,footY-4,PW,50,[255,255,255]);
+  fillStroke(ML,footY,CW,18,C_FOOT);
+  setF('italic',6.5,[100,110,130]);
+  doc.text('\u2605  Archivar junto con la version aprobada en: 01_Propuestas_Activas / GPMC-ANO-NUM_NombreCliente_MCV.pdf',ML+5,footY+12,{maxWidth:CW-10});
+  fillRect(0,PH-8,PW,8,C_RED);
+  setF('normal',6.5,[120,120,120]);
+  doc.text('GPMC S.A. de C.V. \u2014 Sistema de Propuestas Comerciales \u2014 MCV v1.0',PW/2,PH-2,{align:'center'});
+
+  doc.save('GPMC_MCV_'+_panelBaseCode+'.pdf');
+  toast('\u2713 MCV descargado','ok');
 }
 
 window.addEventListener('DOMContentLoaded', function() {
