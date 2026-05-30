@@ -2152,7 +2152,10 @@ function initPDFStep() {
 // ═══════════════════════════════════════════════════════
 // SAVE TO SHEETS
 // ═══════════════════════════════════════════════════════
+var _saving = false;
 async function guardar() {
+  if(_saving) { toast('⚠ Guardando, espere...','warn'); return; }
+  _saving = true;
   var sub=0;
   rows.forEach(function(r){if(r.type==='item')sub+=(parseFloat(r.qty)||0)*(parseFloat(r.price)||0);});
   var ivaChk = document.getElementById('iva-chk');
@@ -2188,29 +2191,27 @@ async function guardar() {
 
   try {
     if(window.location.protocol==='file:'){toast('⚠ Solo funciona en servidor web','warn');return;}
-    if(_savedSheetRow > 0) {
-      // Already saved in this session — update same row directly
-      await sheetsUpdate('Historial', 'A'+_savedSheetRow+':R'+_savedSheetRow, rowData);
-      toast('✓ '+propCode+' actualizada','ok');
-    } else {
-      // First save — check if exists in Sheets, then append or update
-      var existData = await sheetsRead('Historial', 'A2:A500');
-      var existCodes = (existData.values||[]).map(function(r){ return (r[0]||'').trim(); });
-      var existIdx = existCodes.indexOf(propCode.trim());
-      if(existIdx >= 0) {
-        _savedSheetRow = existIdx + 2;
-        await sheetsUpdate('Historial', 'A'+_savedSheetRow+':R'+_savedSheetRow, rowData);
-        toast('✓ '+propCode+' actualizada','ok');
-      } else {
-        // New row — append and record the row number
-        var countBefore = existCodes.filter(function(c){return c;}).length;
-        await sheetsAppend('Historial', rowData);
-        _savedSheetRow = countBefore + 2; // header + rows before + new row
-        toast('✓ '+propCode+' guardada','ok');
+    // Search Sheets for existing row by propCode — always overwrite if found
+    var existData2 = await sheetsRead('Historial', 'A1:A500');
+    var allRows2 = existData2.values || [];
+    var foundRow2 = -1;
+    for(var ri2 = 1; ri2 < allRows2.length; ri2++) {
+      if((allRows2[ri2][0]||'').trim() === propCode.trim()) {
+        foundRow2 = ri2 + 1;
+        break;
       }
     }
+    if(foundRow2 > 0) {
+      await sheetsUpdate('Historial', 'A'+foundRow2+':R'+foundRow2, rowData);
+      toast('✓ '+propCode+' actualizada','ok');
+    } else {
+      await sheetsAppend('Historial', rowData);
+      toast('✓ '+propCode+' guardada','ok');
+    }
     await guardarCliente(gv('f-cliente'),grv('tipo-cliente'),gv('f-contacto'),gv('f-ciudad'),gv('f-telefono'),gv('f-correo'));
+    _saving = false;
   } catch(e) {
+    _saving = false;
     toast('⚠ Error al guardar en Sheets','warn');
     console.error(e);
   }
