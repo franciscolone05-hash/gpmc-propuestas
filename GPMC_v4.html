@@ -3524,36 +3524,45 @@ async function guardarResultado() {
   var monto     = document.getElementById('res-monto').value||'';
   var fecha     = document.getElementById('res-fecha').value||'';
   var obs       = document.getElementById('res-obs').value||'';
+  var lecJSON   = JSON.stringify(_lecciones);
 
   if(window.location.protocol==='file:') {
     toast('⚠ Solo funciona en servidor web','warn'); return;
   }
   try {
-    // Update all versions of this base code with resultado in cols S-V
-    var data = await sheetsRead('Historial','A1:A500');
-    var codes = (data.values||[]).map(function(x){return (x[0]||'').trim();});
+    // Find sheet row using same reliable method as guardar()
     var lastRow = _panelRows[_panelRows.length-1];
-    var arrIdx2 = -1;
-    for(var si2=1;si2<codes.length;si2++){ // skip header row 0
-      if(codes[si2]===(lastRow[0]||'').trim()){arrIdx2=si2;break;}
+    var targetCode = (lastRow[0]||'').trim();
+    var data = await sheetsRead('Historial','A1:A500');
+    var allCodes = data.values||[];
+    var foundRow = -1;
+    for(var si=1; si<allCodes.length; si++) { // skip header at 0
+      if((allCodes[si][0]||'').trim() === targetCode) {
+        foundRow = si + 1; // 1-based sheet row
+        break;
+      }
     }
-    var sheetRow2 = arrIdx2 + 1; // 1-based
-    if(arrIdx2 >= 0) {
-      await sheetsUpdate('Historial','S'+sheetRow2+':W'+sheetRow2,[[resultado,monto,fecha,obs,JSON.stringify(_lecciones)]]);
-      // Update local cache
-      _panelRows[_panelRows.length-1][18] = resultado;
-      _panelRows[_panelRows.length-1][19] = monto;
-      _panelRows[_panelRows.length-1][20] = fecha;
-      _panelRows[_panelRows.length-1][21] = obs;
-      _panelRows[_panelRows.length-1][22] = JSON.stringify(_lecciones);
-      // Also update _estadoAllRows cache
-      var lastCode=(_panelRows[_panelRows.length-1][0]||'').trim();
-      _estadoAllRows.forEach(function(r){if((r[0]||'').trim()===lastCode){r[18]=resultado;r[19]=monto;r[20]=fecha;r[21]=obs;r[22]=JSON.stringify(_lecciones);}});
-      toast('✓ Resultado guardado: '+resultado,'ok');
-    }
+    if(foundRow < 0) { toast('⚠ Propuesta no encontrada en Sheets','warn'); return; }
+
+    // Write each column individually to avoid range issues
+    await sheetsUpdate('Historial','S'+foundRow+':S'+foundRow,[[resultado]]);
+    await sheetsUpdate('Historial','T'+foundRow+':T'+foundRow,[[monto]]);
+    await sheetsUpdate('Historial','U'+foundRow+':U'+foundRow,[[fecha]]);
+    await sheetsUpdate('Historial','V'+foundRow+':V'+foundRow,[[obs]]);
+    await sheetsUpdate('Historial','W'+foundRow+':W'+foundRow,[[lecJSON]]);
+
+    // Update local caches
+    lastRow[18]=resultado; lastRow[19]=monto; lastRow[20]=fecha;
+    lastRow[21]=obs; lastRow[22]=lecJSON;
+    _estadoAllRows.forEach(function(r){
+      if((r[0]||'').trim()===targetCode){
+        r[18]=resultado; r[19]=monto; r[20]=fecha; r[21]=obs; r[22]=lecJSON;
+      }
+    });
+    toast('✓ Resultado guardado: '+resultado,'ok');
   } catch(e) {
-    toast('⚠ Error: '+e.message,'warn');
-    console.error(e);
+    toast('⚠ Error al guardar: '+e.message,'warn');
+    console.error('guardarResultado error:',e);
   }
 }
 
