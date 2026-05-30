@@ -3338,9 +3338,13 @@ async function cambiarEstadoVersion(rowIdx, nuevoEstado) {
   try {
     var data = await sheetsRead('Historial','A1:A500');
     var codes = (data.values||[]).map(function(x){return (x[0]||'').trim();});
-    var sheetRow = codes.indexOf((r[0]||'').trim());
-    if(sheetRow < 0) { toast('⚠ Versión no encontrada en Sheets','warn'); return; }
-    // Update only column H (estado = index 7, col H = col 8)
+    var arrIdx = -1;
+    for(var si=1;si<codes.length;si++){ // start at 1 to skip header
+      if(codes[si]===(r[0]||'').trim()){arrIdx=si;break;}
+    }
+    if(arrIdx < 0) { toast('⚠ Versión no encontrada en Sheets','warn'); return; }
+    var sheetRow = arrIdx + 1; // +1 because Sheets rows are 1-based
+    // Update only column H (estado)
     await sheetsUpdate('Historial','H'+sheetRow+':H'+sheetRow,[[nuevoEstado]]);
     _panelRows[rowIdx][7] = nuevoEstado;
     renderPanelVersiones(_panelRows);
@@ -3401,11 +3405,14 @@ async function guardarResultado() {
     // Update all versions of this base code with resultado in cols S-V
     var data = await sheetsRead('Historial','A1:A500');
     var codes = (data.values||[]).map(function(x){return (x[0]||'').trim();});
-    // Update last version row (highest version number)
     var lastRow = _panelRows[_panelRows.length-1];
-    var sheetRow = codes.indexOf((lastRow[0]||'').trim());
-    if(sheetRow >= 0) {
-      await sheetsUpdate('Historial','S'+sheetRow+':V'+sheetRow,[[resultado,monto,fecha,obs]]);
+    var arrIdx2 = -1;
+    for(var si2=1;si2<codes.length;si2++){ // skip header row 0
+      if(codes[si2]===(lastRow[0]||'').trim()){arrIdx2=si2;break;}
+    }
+    var sheetRow2 = arrIdx2 + 1; // 1-based
+    if(arrIdx2 >= 0) {
+      await sheetsUpdate('Historial','S'+sheetRow2+':V'+sheetRow2,[[resultado,monto,fecha,obs]]);
       // Update local cache
       _panelRows[_panelRows.length-1][18] = resultado;
       _panelRows[_panelRows.length-1][19] = monto;
