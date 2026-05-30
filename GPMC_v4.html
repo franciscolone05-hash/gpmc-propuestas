@@ -345,6 +345,11 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
       <div class="sp-card-title">Estado de ofertas</div>
       <div class="sp-card-desc">Ver versiones, aprobar y gestionar resultados</div>
     </div>
+    <div class="sp-card" id="btn-catalogo">
+      <div class="sp-icon-wrap">📦</div>
+      <div class="sp-card-title">Catálogo</div>
+      <div class="sp-card-desc">Gestionar partidas, precios y proveedores</div>
+    </div>
   </div>
   <div class="sp-footer">GPMC &nbsp;·&nbsp; REP — Sistema de propuestas &nbsp;·&nbsp; v8.0</div>
 </div>
@@ -535,6 +540,88 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
           <button class="btn btn-red btn-sm" onclick="guardarResultado()">💾 Guardar resultado</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: BUSQUEDA CATALOGO (desde PEP) -->
+<div id="modal-catalogo-busqueda" class="modal">
+  <div class="mbox" style="max-width:560px">
+    <div class="mhdr">
+      <h3>🔍 Buscar en catálogo</h3>
+      <button class="mbtn-close" onclick="cerrarCatalogoBusqueda()">×</button>
+    </div>
+    <div class="mbody">
+      <input type="text" class="msearch" id="cat-search-input"
+        placeholder="Descripción, categoría o código…"
+        oninput="renderCatalogoSearch(this.value.toLowerCase().trim())">
+      <div id="cat-search-result" class="plist" style="max-height:220px;overflow-y:auto"></div>
+
+      <!-- Price panel (shown after selecting) -->
+      <div id="cat-precio-panel" style="display:none;margin-top:12px;background:#1e1e1e;border-radius:8px;padding:14px;border:1px solid #3d3d3d">
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px" id="cat-sel-desc"></div>
+        <div style="font-size:11px;color:#888;margin-bottom:12px">Unidad: <span id="cat-sel-unidad"></span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end">
+          <div>
+            <div style="font-size:10px;color:#888;margin-bottom:4px">Costo base</div>
+            <div style="font-size:15px;font-weight:700;color:#aaa" id="cat-costo-val">$0.00</div>
+          </div>
+          <div>
+            <label style="font-size:10px;color:#888;display:block;margin-bottom:4px">Margen %</label>
+            <input type="number" id="cat-margen-pct" value="35" min="0" max="500"
+              style="width:100%;padding:7px 8px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px;text-align:center"
+              oninput="recalcPrecioCatalogo()">
+          </div>
+          <div>
+            <label style="font-size:10px;color:#52EFFF;display:block;margin-bottom:4px">Precio venta $</label>
+            <input type="number" id="cat-precio-final" value="0" step="0.01"
+              style="width:100%;padding:7px 8px;background:#1a3a3a;border:1px solid #52EFFF;border-radius:6px;color:#52EFFF;font-size:13px;font-weight:700;text-align:center"
+              oninput="recalcMargenCatalogo()">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-light btn-sm" onclick="cerrarCatalogoBusqueda()">Cancelar</button>
+      <button class="btn btn-red btn-sm" id="cat-aplicar-btn" onclick="aplicarItemCatalogo()" style="display:none">✓ Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: GESTIÓN CATÁLOGO (desde splash) -->
+<div id="modal-gestion-catalogo" class="modal">
+  <div class="mbox" style="max-width:640px">
+    <div class="mhdr">
+      <h3>📦 Catálogo de partidas</h3>
+      <button class="mbtn-close" onclick="cerrarGestionCatalogo()">×</button>
+    </div>
+    <div class="mbody">
+      <!-- Add form -->
+      <div style="background:#1e1e1e;border-radius:8px;padding:14px;margin-bottom:14px;border:1px solid #3d3d3d">
+        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Agregar nuevo ítem</div>
+        <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px;margin-bottom:8px">
+          <input id="gcat-codigo" placeholder="Código (ej. MAT-001)" class="field-inp" style="padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
+          <input id="gcat-desc" placeholder="Descripción *" class="field-inp" style="padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
+          <input id="gcat-unidad" placeholder="Unidad (M2, mtl…)" class="field-inp" style="padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <input id="gcat-costo" type="number" placeholder="Precio costo $" step="0.01" class="field-inp" style="padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
+          <input id="gcat-proveedor" placeholder="Proveedor" class="field-inp" style="padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
+          <input id="gcat-categoria" placeholder="Categoría (Civil, Techo…)" class="field-inp" style="padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
+        </div>
+        <div style="display:flex;gap:8px">
+          <input id="gcat-notas" placeholder="Notas opcionales" class="field-inp" style="flex:1;padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
+          <button class="btn btn-red btn-sm" onclick="guardarItemCatalogo()">+ Agregar</button>
+        </div>
+      </div>
+      <!-- List -->
+      <input type="text" class="msearch" id="gcat-search"
+        placeholder="Buscar en catálogo…" oninput="filterGestionCatalogo()" style="margin-bottom:8px">
+      <div id="gcat-list" class="plist" style="max-height:280px;overflow-y:auto"></div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-light btn-sm" onclick="cerrarGestionCatalogo()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1895,6 +1982,7 @@ function renderTable() {
           'oninput="rows['+i+'].price=this.value;updateSub(this,'+i+')"></td>' +
         '<td class="subtotal" id="sub-'+i+'">'+(sub>0?fmtMoney(sub):'')+'</td>' +
         '<td class="no-print" style="white-space:nowrap;text-align:center">' +
+          '<button class="move-btn" onclick="abrirCatalogoBusqueda('+i+')" title="Buscar en catálogo" style="font-size:11px;padding:2px 5px">🔍</button>' +
           '<button class="move-btn" onclick="moveRow('+i+',-1)" title="Subir">↑</button>' +
           '<button class="move-btn" onclick="moveRow('+i+',1)" title="Bajar">↓</button>' +
           '<button class="del-btn" onclick="delRow('+i+')">✕</button>' +
@@ -3632,13 +3720,263 @@ async function generarMCV() {
   toast('\u2713 MCV descargado','ok');
 }
 
+// ═══════════════════════════════════════════════════════
+// CATÁLOGO DE PARTIDAS — búsqueda y gestión
+// ═══════════════════════════════════════════════════════
+var _catalogoItems = [];
+var _catalogoMargen = 0.35;
+var _catalogoRowIdx = -1; // which PEP row triggered the search
+
+// ── Load config (margen) from Sheets ──────────────────
+async function loadConfiguracion() {
+  if(window.location.protocol === 'file:') return;
+  try {
+    var data = await sheetsRead('Configuracion','A1:B20');
+    var rows2 = data.values||[];
+    rows2.forEach(function(r){
+      if((r[0]||'').toString().toLowerCase()==='margen_ganancia') {
+        _catalogoMargen = parseFloat(r[1])||0.35;
+      }
+    });
+  } catch(e){ console.log('config err:',e); }
+}
+
+// ── Open catalog search from PEP row ──────────────────
+function abrirCatalogoBusqueda(rowIdx) {
+  _catalogoRowIdx = rowIdx;
+  document.getElementById('modal-catalogo-busqueda').classList.add('open');
+  document.getElementById('cat-search-input').value = '';
+  document.getElementById('cat-search-result').innerHTML = '';
+  document.getElementById('cat-precio-panel').style.display = 'none';
+  document.getElementById('cat-search-input').focus();
+  if(_catalogoItems.length === 0) loadCatalogoItems();
+}
+
+function cerrarCatalogoBusqueda() {
+  document.getElementById('modal-catalogo-busqueda').classList.remove('open');
+  _catalogoRowIdx = -1;
+}
+
+// ── Load catalog items from Sheets ────────────────────
+async function loadCatalogoItems() {
+  var list = document.getElementById('cat-search-result');
+  list.innerHTML = '<div class="pmeta" style="padding:16px;text-align:center;color:#888">Cargando catálogo…</div>';
+  if(window.location.protocol === 'file:') {
+    list.innerHTML = '<div class="pmeta" style="padding:16px;text-align:center;color:#e67e22">⚠ Conecta a servidor.</div>';
+    return;
+  }
+  try {
+    var data = await sheetsRead('Catalogo','A2:G500');
+    _catalogoItems = (data.values||[]).filter(function(r){ return r[1]&&r[1].toString().trim(); });
+    await loadConfiguracion();
+    renderCatalogoSearch('');
+  } catch(e) {
+    list.innerHTML = '<div class="pmeta" style="padding:16px;text-align:center;color:#c0392b">Error al cargar catálogo.</div>';
+  }
+}
+
+function renderCatalogoSearch(q) {
+  var list = document.getElementById('cat-search-result');
+  var filtered = q
+    ? _catalogoItems.filter(function(r){
+        return (r[1]||'').toLowerCase().includes(q) ||
+               (r[5]||'').toLowerCase().includes(q) ||
+               (r[0]||'').toLowerCase().includes(q);
+      })
+    : _catalogoItems;
+
+  if(!filtered.length) {
+    list.innerHTML = '<div class="pmeta" style="padding:16px;text-align:center;color:#888">Sin resultados.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  filtered.slice(0,30).forEach(function(r) {
+    var item = document.createElement('div');
+    item.className = 'pitem';
+    item.style.cssText = 'cursor:pointer;margin-bottom:4px';
+    item.innerHTML =
+      '<div style="flex:1">' +
+        '<div class="pname" style="font-size:12px">' + esc(r[1]||'') + '</div>' +
+        '<div class="pmeta">' + esc(r[5]||'Sin categoría') + ' · ' + esc(r[2]||'') + (r[4]?' · '+esc(r[4]):'') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;min-width:60px">' +
+        '<div style="font-size:12px;font-weight:700;color:#fff">$'+parseFloat(r[3]||0).toFixed(2)+'</div>' +
+        '<div class="pmeta">costo</div>' +
+      '</div>';
+    item.addEventListener('click', function(){ selectCatalogoItem(r); });
+    list.appendChild(item);
+  });
+}
+
+function selectCatalogoItem(r) {
+  var costo   = parseFloat(r[3]||0);
+  var margen  = _catalogoMargen;
+  var precioV = costo * (1 + margen);
+
+  // Show price panel and apply button
+  document.getElementById('cat-aplicar-btn').style.display='';
+  var panel = document.getElementById('cat-precio-panel');
+  panel.style.display = 'block';
+  document.getElementById('cat-sel-desc').textContent  = r[1]||'';
+  document.getElementById('cat-sel-unidad').textContent = r[2]||'';
+  document.getElementById('cat-costo-val').textContent  = '$'+costo.toFixed(2);
+  document.getElementById('cat-margen-pct').value = Math.round(margen*100);
+  document.getElementById('cat-precio-final').value    = precioV.toFixed(2);
+
+  // Store for recalc
+  panel.dataset.costo = costo;
+  panel.dataset.desc  = r[1]||'';
+  panel.dataset.unidad= r[2]||'';
+  panel.dataset.notas = r[6]||'';
+}
+
+function recalcPrecioCatalogo() {
+  var panel  = document.getElementById('cat-precio-panel');
+  var costo  = parseFloat(panel.dataset.costo||0);
+  var margen = parseFloat(document.getElementById('cat-margen-pct').value||35)/100;
+  document.getElementById('cat-precio-final').value = (costo*(1+margen)).toFixed(2);
+}
+
+function recalcMargenCatalogo() {
+  var panel  = document.getElementById('cat-precio-panel');
+  var costo  = parseFloat(panel.dataset.costo||0);
+  var precio = parseFloat(document.getElementById('cat-precio-final').value||0);
+  if(costo > 0) {
+    var margen = Math.round(((precio/costo)-1)*100);
+    document.getElementById('cat-margen-pct').value = margen;
+  }
+}
+
+function aplicarItemCatalogo() {
+  if(_catalogoRowIdx < 0) return;
+  var panel  = document.getElementById('cat-precio-panel');
+  var desc   = panel.dataset.desc||'';
+  var unidad = panel.dataset.unidad||'';
+  var precio = parseFloat(document.getElementById('cat-precio-final').value||0);
+
+  // Apply to PEP row
+  rows[_catalogoRowIdx].desc  = desc;
+  rows[_catalogoRowIdx].unit  = unidad;
+  rows[_catalogoRowIdx].price = precio;
+  renderTable();
+  cerrarCatalogoBusqueda();
+  toast('✓ Partida cargada desde catálogo','ok');
+}
+
+// ══════════════════════════════════════════════════════
+// GESTIÓN DE CATÁLOGO (splash button)
+// ══════════════════════════════════════════════════════
+var _gestionCatItems = [];
+
+function abrirGestionCatalogo() {
+  document.getElementById('modal-gestion-catalogo').classList.add('open');
+  loadGestionCatalogo();
+}
+function cerrarGestionCatalogo() {
+  document.getElementById('modal-gestion-catalogo').classList.remove('open');
+}
+
+async function loadGestionCatalogo() {
+  var list = document.getElementById('gcat-list');
+  list.innerHTML = '<div class="pmeta" style="padding:16px;text-align:center;color:#888">Cargando…</div>';
+  if(window.location.protocol==='file:'){
+    list.innerHTML='<div class="pmeta" style="padding:16px;text-align:center;color:#e67e22">⚠ Conecta a servidor.</div>';
+    return;
+  }
+  try {
+    var data = await sheetsRead('Catalogo','A1:G500');
+    var allR = data.values||[];
+    _gestionCatItems = allR.slice(1).filter(function(r){return r[1]&&r[1].toString().trim();});
+    renderGestionList(_gestionCatItems);
+  } catch(e){
+    list.innerHTML='<div class="pmeta" style="padding:16px;text-align:center;color:#c0392b">Error al cargar.</div>';
+  }
+}
+
+function renderGestionList(items) {
+  var list = document.getElementById('gcat-list');
+  list.innerHTML = '';
+  if(!items.length){
+    list.innerHTML='<div class="pmeta" style="padding:16px;text-align:center;color:#888">Catálogo vacío. Agrega el primer ítem.</div>';
+    return;
+  }
+  items.forEach(function(r,i){
+    var item = document.createElement('div');
+    item.className = 'pitem';
+    item.style.marginBottom = '4px';
+    item.innerHTML =
+      '<div style="flex:1">' +
+        '<div class="pname" style="font-size:12px">' + esc(r[1]||'') + '</div>' +
+        '<div class="pmeta">' + esc(r[5]||'') + ' · ' + esc(r[2]||'') + ' · ' + esc(r[4]||'') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;min-width:80px;margin-right:10px">' +
+        '<div style="font-size:12px;font-weight:700;color:#fff">$'+parseFloat(r[3]||0).toFixed(2)+'</div>' +
+      '</div>' +
+      '<button class="del-btn" onclick="eliminarItemCatalogo('+i+')" title="Eliminar">✕</button>';
+    list.appendChild(item);
+  });
+}
+
+function filterGestionCatalogo() {
+  var q = (document.getElementById('gcat-search').value||'').toLowerCase().trim();
+  if(!q){ renderGestionList(_gestionCatItems); return; }
+  renderGestionList(_gestionCatItems.filter(function(r){
+    return (r[1]||'').toLowerCase().includes(q)||(r[5]||'').toLowerCase().includes(q);
+  }));
+}
+
+async function guardarItemCatalogo() {
+  var codigo = document.getElementById('gcat-codigo').value.trim();
+  var desc   = document.getElementById('gcat-desc').value.trim();
+  var unidad = document.getElementById('gcat-unidad').value.trim();
+  var costo  = document.getElementById('gcat-costo').value.trim();
+  var prov   = document.getElementById('gcat-proveedor').value.trim();
+  var cat    = document.getElementById('gcat-categoria').value.trim();
+  var notas  = document.getElementById('gcat-notas').value.trim();
+
+  if(!desc){ toast('⚠ La descripción es obligatoria','warn'); return; }
+  if(window.location.protocol==='file:'){ toast('⚠ Solo funciona en servidor','warn'); return; }
+
+  try {
+    await sheetsAppend('Catalogo',[[codigo,desc,unidad,costo,prov,cat,notas]]);
+    toast('✓ Ítem agregado al catálogo','ok');
+    // Clear form
+    ['gcat-codigo','gcat-desc','gcat-unidad','gcat-costo','gcat-proveedor','gcat-categoria','gcat-notas']
+      .forEach(function(id){ document.getElementById(id).value=''; });
+    loadGestionCatalogo();
+    _catalogoItems = []; // force reload on next PEP search
+  } catch(e){ toast('⚠ Error: '+e.message,'warn'); }
+}
+
+async function eliminarItemCatalogo(idx2) {
+  if(!confirm('¿Eliminar este ítem del catálogo?')) return;
+  // We need to find the sheet row
+  try {
+    var data = await sheetsRead('Catalogo','B2:B500');
+    var descs = (data.values||[]).map(function(r){return (r[0]||'').trim();});
+    var sheetRow = -1;
+    var targetDesc = (_gestionCatItems[idx2]||[])[1]||'';
+    for(var si=0;si<descs.length;si++){
+      if(descs[si]===targetDesc){ sheetRow=si+2; break; }
+    }
+    if(sheetRow<0){ toast('⚠ No encontrado','warn'); return; }
+    // Clear the row
+    await sheetsUpdate('Catalogo','A'+sheetRow+':G'+sheetRow,[['','','','','','','']]);
+    toast('✓ Ítem eliminado','ok');
+    loadGestionCatalogo();
+    _catalogoItems=[];
+  } catch(e){ toast('⚠ Error: '+e.message,'warn'); }
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('input[name="tipo-cliente"]').forEach(function(radio){
     radio.addEventListener('change',function(){var btn=document.getElementById('btn-buscar-cliente');if(btn)btn.style.display=this.value==='Recurrente'?'':'none';});
   });
   var btnNew    = document.getElementById('btn-new');
-  var btnStatus = document.getElementById('btn-status');
+  var btnStatus   = document.getElementById('btn-status');
   if(btnStatus) btnStatus.addEventListener('click', splashStatus);
+  var btnCatalogo = document.getElementById('btn-catalogo');
+  if(btnCatalogo) btnCatalogo.addEventListener('click', abrirGestionCatalogo);
   var btnCont  = document.getElementById('btn-continue');
   var btnReuse = document.getElementById('btn-reuse');
   if(btnNew)   btnNew.addEventListener('click',   splashNew);
