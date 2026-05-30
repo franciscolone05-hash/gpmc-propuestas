@@ -3530,9 +3530,11 @@ async function guardarResultado() {
     toast('⚠ Solo funciona en servidor web','warn'); return;
   }
   try {
+    console.log('[GPMC] guardarResultado start, resultado=',resultado);
     // Find sheet row using same reliable method as guardar()
     var lastRow = _panelRows[_panelRows.length-1];
     var targetCode = (lastRow[0]||'').trim();
+    console.log('[GPMC] targetCode=',targetCode,'_panelRows.length=',_panelRows.length);
     var data = await sheetsRead('Historial','A1:A500');
     var allCodes = data.values||[];
     var foundRow = -1;
@@ -3542,9 +3544,11 @@ async function guardarResultado() {
         break;
       }
     }
+    console.log('[GPMC] foundRow=',foundRow);
     if(foundRow < 0) { toast('⚠ Propuesta no encontrada en Sheets','warn'); return; }
 
     // Write each column individually to avoid range issues
+    console.log('[GPMC] writing S'+foundRow);
     await sheetsUpdate('Historial','S'+foundRow+':S'+foundRow,[[resultado]]);
     await sheetsUpdate('Historial','T'+foundRow+':T'+foundRow,[[monto]]);
     await sheetsUpdate('Historial','U'+foundRow+':U'+foundRow,[[fecha]]);
@@ -3559,10 +3563,11 @@ async function guardarResultado() {
         r[18]=resultado; r[19]=monto; r[20]=fecha; r[21]=obs; r[22]=lecJSON;
       }
     });
+    console.log('[GPMC] all columns written OK');
     toast('✓ Resultado guardado: '+resultado,'ok');
   } catch(e) {
     toast('⚠ Error al guardar: '+e.message,'warn');
-    console.error('guardarResultado error:',e);
+    console.error('[GPMC] guardarResultado error:',e);
   }
 }
 
