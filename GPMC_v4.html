@@ -612,7 +612,8 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
         </div>
         <div style="display:flex;gap:8px">
           <input id="gcat-notas" placeholder="Notas opcionales" class="field-inp" style="flex:1;padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
-          <button class="btn btn-red btn-sm" onclick="guardarItemCatalogo()">+ Agregar</button>
+          <button class="btn btn-red btn-sm" id="gcat-save-btn" onclick="guardarItemCatalogo()">+ Agregar</button>
+          <button class="btn btn-ghost btn-sm" id="gcat-cancel-btn" onclick="cancelarEditCatalogo()" style="display:none">✕ Cancelar</button>
         </div>
       </div>
       <!-- List -->
@@ -3767,7 +3768,7 @@ async function loadCatalogoItems() {
   }
   try {
     var data = await sheetsRead('Catalogo','A2:G500');
-    _catalogoItems = (data.values||[]).filter(function(r){ return r[1]&&r[1].toString().trim(); });
+    _catalogoItems = (data.values||[]).filter(function(r){ var d=(r[1]||'').toString().trim(); return d && d.toLowerCase()!=='descripcion' && d.toLowerCase()!=='descripción'; });
     await loadConfiguracion();
     renderCatalogoSearch('');
   } catch(e) {
@@ -3886,7 +3887,7 @@ async function loadGestionCatalogo() {
   try {
     var data = await sheetsRead('Catalogo','A1:G500');
     var allR = data.values||[];
-    _gestionCatItems = allR.slice(1).filter(function(r){return r[1]&&r[1].toString().trim();});
+    _gestionCatItems = allR.slice(1).filter(function(r){ var d=(r[1]||'').toString().trim(); return d && d.toLowerCase()!=='descripcion' && d.toLowerCase()!=='descripción'; });
     renderGestionList(_gestionCatItems);
   } catch(e){
     list.innerHTML='<div class="pmeta" style="padding:16px;text-align:center;color:#c0392b">Error al cargar.</div>';
@@ -3905,12 +3906,13 @@ function renderGestionList(items) {
     item.className = 'pitem';
     item.style.marginBottom = '4px';
     item.innerHTML =
-      '<div style="flex:1">' +
+      '<div style="flex:1;cursor:pointer" onclick="editarItemCatalogo('+i+')">' +
         '<div class="pname" style="font-size:12px">' + esc(r[1]||'') + '</div>' +
-        '<div class="pmeta">' + esc(r[5]||'') + ' · ' + esc(r[2]||'') + ' · ' + esc(r[4]||'') + '</div>' +
+        '<div class="pmeta">' + esc(r[5]||'') + ' · ' + esc(r[2]||'') + (r[4]?' · '+esc(r[4]):'') + '</div>' +
       '</div>' +
-      '<div style="text-align:right;min-width:80px;margin-right:10px">' +
+      '<div style="text-align:right;min-width:80px;margin-right:10px;cursor:pointer" onclick="editarItemCatalogo('+i+')">' +
         '<div style="font-size:12px;font-weight:700;color:#fff">$'+parseFloat(r[3]||0).toFixed(2)+'</div>' +
+        '<div class="pmeta">✏ editar</div>' +
       '</div>' +
       '<button class="del-btn" onclick="eliminarItemCatalogo('+i+')" title="Eliminar">✕</button>';
     list.appendChild(item);
@@ -3938,14 +3940,61 @@ async function guardarItemCatalogo() {
   if(window.location.protocol==='file:'){ toast('⚠ Solo funciona en servidor','warn'); return; }
 
   try {
-    await sheetsAppend('Catalogo',[[codigo,desc,unidad,costo,prov,cat,notas]]);
-    toast('✓ Ítem agregado al catálogo','ok');
-    // Clear form
-    ['gcat-codigo','gcat-desc','gcat-unidad','gcat-costo','gcat-proveedor','gcat-categoria','gcat-notas']
-      .forEach(function(id){ document.getElementById(id).value=''; });
+    if(_gcat_editIdx >= 0) {
+      // UPDATE existing — find sheet row by description
+      var existItem = _gestionCatItems[_gcat_editIdx];
+      var existDesc = (existItem[1]||'').trim();
+      var data2 = await sheetsRead('Catalogo','B1:B500');
+      var descRows = (data2.values||[]).map(function(r){return (r[0]||'').trim();});
+      var sheetR = -1;
+      for(var si=1;si<descRows.length;si++){
+        if(descRows[si]===existDesc){sheetR=si+1;break;}
+      }
+      if(sheetR > 0) {
+        await sheetsUpdate('Catalogo','A'+sheetR+':G'+sheetR,[[codigo,desc,unidad,costo,prov,cat,notas]]);
+        toast('✓ Ítem actualizado','ok');
+      } else {
+        toast('⚠ No se encontró el ítem en Sheets','warn');
+      }
+      cancelarEditCatalogo();
+    } else {
+      // NEW item
+      await sheetsAppend('Catalogo',[[codigo,desc,unidad,costo,prov,cat,notas]]);
+      toast('✓ Ítem agregado al catálogo','ok');
+      ['gcat-codigo','gcat-desc','gcat-unidad','gcat-costo','gcat-proveedor','gcat-categoria','gcat-notas']
+        .forEach(function(id){ document.getElementById(id).value=''; });
+    }
     loadGestionCatalogo();
-    _catalogoItems = []; // force reload on next PEP search
+    _catalogoItems = [];
   } catch(e){ toast('⚠ Error: '+e.message,'warn'); }
+}
+
+var _gcat_editIdx = -1; // -1 = new, >=0 = editing
+
+function editarItemCatalogo(i) {
+  var r = _gestionCatItems[i];
+  if(!r) return;
+  _gcat_editIdx = i;
+  document.getElementById('gcat-codigo').value    = r[0]||'';
+  document.getElementById('gcat-desc').value      = r[1]||'';
+  document.getElementById('gcat-unidad').value    = r[2]||'';
+  document.getElementById('gcat-costo').value     = r[3]||'';
+  document.getElementById('gcat-proveedor').value = r[4]||'';
+  document.getElementById('gcat-categoria').value = r[5]||'';
+  document.getElementById('gcat-notas').value     = r[6]||'';
+  // Change button label
+  document.getElementById('gcat-save-btn').textContent = '💾 Actualizar';
+  document.getElementById('gcat-cancel-btn').style.display = '';
+  // Scroll form into view
+  document.getElementById('gcat-codigo').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function cancelarEditCatalogo() {
+  _gcat_editIdx = -1;
+  ['gcat-codigo','gcat-desc','gcat-unidad','gcat-costo','gcat-proveedor','gcat-categoria','gcat-notas']
+    .forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('gcat-save-btn').textContent = '+ Agregar';
+  document.getElementById('gcat-cancel-btn').style.display = 'none';
 }
 
 async function eliminarItemCatalogo(idx2) {
