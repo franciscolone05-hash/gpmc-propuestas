@@ -3340,7 +3340,7 @@ async function loadEstadoList() {
     return;
   }
   try {
-    var data = await sheetsRead('Historial','A2:R500');
+    var data = await sheetsRead('Historial','A2:W500');
     _estadoAllRows = (data.values||[]).filter(function(r){ var c=(r[0]||'').toString().trim(); return c && c.toUpperCase()!=='CODIGO' && /GPMC/i.test(c); });
     renderEstadoList(_estadoAllRows);
   } catch(e) {
@@ -4082,243 +4082,333 @@ function eliminarLeccion(i) {
 }
 
 // ═══════════════════════════════════════════════════════
-// BBDD PDF — Base de Datos de Propuestas (Anexo 9)
+// BBDD PDF v2 — Base de Datos de Propuestas (Anexo 9)
+// Portrait, 4 módulos: Historial, Catálogo, Proveedores, Indicadores
 // ═══════════════════════════════════════════════════════
 async function generarBBDD() {
   await loadPDFAssets();
 
-  var doc = new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'letter'});
-  var PW=792, PH=612, ML=28, MR=28, MT=20, MB=20, CW=PW-ML-MR;
+  var doc = new window.jspdf.jsPDF({orientation:'portrait',unit:'pt',format:'letter'});
+  var PW=612, PH=792, ML=32, MR=32, MT=20, CW=PW-ML-MR; // 548pt
 
   var C_RED=[192,0,0], C_DARK=[44,44,44], C_LBL=[230,235,242];
   var C_WHITE=[255,255,255], C_BORD=[160,168,185], C_TXT=[30,30,30];
   var C_LTXT=[75,85,100], C_FOOT=[240,242,246], C_GRP=[60,70,90];
-  var C_ALT=[248,249,252];
+  var C_ALT=[248,249,252], C_GREEN=[220,240,220], C_AMBER=[255,243,220];
 
-  function setF(style,sz,color){
-    doc.setFont('helvetica',style||'normal'); doc.setFontSize(sz||8);
-    var c=color||C_TXT; doc.setTextColor(c[0],c[1],c[2]);
-  }
-  function setBorder(c){ var b=c||C_BORD; doc.setDrawColor(b[0],b[1],b[2]); doc.setLineWidth(0.4); }
-  function fillRect(x,y,w,h,c){ doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,h,'F'); }
-  function fillStroke(x,y,w,h,fill){ fillRect(x,y,w,h,fill); setBorder(); doc.rect(x,y,w,h,'S'); }
-  function cell(text,x,y,w,h,fill,bold,align){
-    fillStroke(x,y,w,h,fill||C_WHITE);
-    if(text!==undefined && text!==null && text!==''){
-      setF(bold?'bold':'normal',7,fill===C_DARK||fill===C_GRP?[255,255,255]:C_TXT);
-      var lines=doc.splitTextToSize(String(text),w-6);
-      var ty = align==='center' ? y+h/2+2.5 : y+h/2+2.5;
-      doc.text(lines, align==='center'?x+w/2:x+4, ty,
-        {align:align==='center'?'center':'left', maxWidth:w-6});
+  function setF(s,sz,c){ doc.setFont('helvetica',s||'normal'); doc.setFontSize(sz||7.5);
+    var col=c||C_TXT; doc.setTextColor(col[0],col[1],col[2]); }
+  function setBd(c){ var b=c||C_BORD; doc.setDrawColor(b[0],b[1],b[2]); doc.setLineWidth(0.4); }
+  function fR(x,y,w,h,c){ doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,h,'F'); }
+  function fS(x,y,w,h,f){ fR(x,y,w,h,f||C_WHITE); setBd(); doc.rect(x,y,w,h,'S'); }
+  function cell(txt,x,y,w,h,fill,bold,align){
+    fS(x,y,w,h,fill||C_WHITE);
+    if(txt!==undefined&&txt!==null&&String(txt)!==''){
+      var isDark=fill===C_DARK||fill===C_GRP;
+      setF(bold?'bold':'normal',7,isDark?[255,255,255]:C_TXT);
+      var lines=doc.splitTextToSize(String(txt),w-6);
+      var tx=align==='center'?x+w/2:x+4;
+      doc.text(lines,tx,y+h/2+2.5,{align:align==='center'?'center':'left',maxWidth:w-6});
     }
   }
-  function sectionHdr(label,y){
-    fillRect(ML,y,CW,14,C_DARK); setBorder(C_DARK); doc.rect(ML,y,CW,14,'S');
-    setF('bold',9,[255,255,255]); doc.text(label,ML+6,y+10);
-    return y+14;
+  function secHdr(lbl,y){
+    fR(ML,y,CW,15,C_DARK); setBd(C_DARK); doc.rect(ML,y,CW,15,'S');
+    setF('bold',9,[255,255,255]); doc.text(lbl,ML+5,y+11); return y+15;
   }
-  function moduleHdr(label,y){
-    fillRect(ML,y,CW,13,C_GRP); setBorder(); doc.rect(ML,y,CW,13,'S');
-    setF('bold',8,[200,210,230]); doc.text(label,ML+6,y+9.5);
-    return y+13;
+  function modHdr(lbl,y){
+    fR(ML,y,CW,13,C_GRP); setBd(); doc.rect(ML,y,CW,13,'S');
+    setF('bold',8,[200,210,230]); doc.text(lbl,ML+5,y+9.5); return y+13;
   }
+  function newPage(){
+    doc.addPage(); fR(0,0,PW,5,C_RED); return MT+6;
+  }
+  function checkY(y,needed){ return y+needed>PH-44?newPage():y; }
 
-  // ── Page header ─────────────────────────────────────
-  function drawHeader(){
-    fillRect(0,0,PW,5,C_RED);
-    var HY=MT, LOGO_W=80, TITLE_W=160, INFO_W=CW-LOGO_W-TITLE_W;
-    var ROW1H=28, ROW2H=16;
-    fillStroke(ML,HY,LOGO_W,ROW1H+ROW2H,C_WHITE);
-    if(PDF_LOGO){ var lh=22,lw=Math.round(lh/0.421); if(lw>LOGO_W-4)lw=LOGO_W-4;
-      try{doc.addImage(PDF_LOGO,'PNG',ML+(LOGO_W-lw)/2,HY+(ROW1H+ROW2H-lh)/2,lw,lh);}catch(e){} }
-    fillRect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,C_DARK);
-    setBorder(C_DARK); doc.rect(ML+LOGO_W,HY,TITLE_W,ROW1H+ROW2H,'S');
+  // ── Shared page header ───────────────────────────────
+  function drawHeader(subtitle){
+    fR(0,0,PW,5,C_RED);
+    var HY=MT,LW=80,TW=160,IW=CW-LW-TW,R1=28,R2=16;
+    fS(ML,HY,LW,R1+R2,C_WHITE);
+    if(PDF_LOGO){var lh=22,lw=Math.round(lh/0.421);if(lw>LW-4)lw=LW-4;
+      try{doc.addImage(PDF_LOGO,'PNG',ML+(LW-lw)/2,HY+(R1+R2-lh)/2,lw,lh);}catch(e){}}
+    fR(ML+LW,HY,TW,R1+R2,C_DARK); setBd(C_DARK); doc.rect(ML+LW,HY,TW,R1+R2,'S');
     setF('bold',9,[255,255,255]);
-    doc.text('BASE DE DATOS DE PROPUESTAS',ML+LOGO_W+5,HY+12);
-    doc.text('BBDD — Anexo 9',ML+LOGO_W+5,HY+22);
-    var IX=ML+LOGO_W+TITLE_W, cellW=INFO_W/3;
-    var fri2=typeof getFRIData==='function'?getFRIData():{};
-    var d=new Date();
-    var fechaHoy=d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
-    var filled=['GPMC',fechaHoy,'v1.0'];
+    doc.text('BASE DE DATOS DE PROPUESTAS',ML+LW+5,HY+11);
+    doc.text(subtitle||'BBDD — Anexo 9',ML+LW+5,HY+22);
+    var IX=ML+LW+TW,cW2=IW/3,d2=new Date();
+    var fechaHoy=d2.getDate()+'/'+(d2.getMonth()+1)+'/'+d2.getFullYear();
     ['Empresa:','Fecha:','Version:'].forEach(function(lab,i){
-      fillStroke(IX+i*cellW,HY,cellW,ROW1H,C_LBL);
-      setF('bold',6.5,C_LTXT); doc.text(lab,IX+i*cellW+3,HY+8);
-      setF('normal',7.5,C_TXT); doc.text(filled[i],IX+i*cellW+3,HY+20);
+      fS(IX+i*cW2,HY,cW2,R1,C_LBL);
+      setF('bold',6,C_LTXT); doc.text(lab,IX+i*cW2+3,HY+8);
+      setF('normal',7,C_TXT); doc.text(['GPMC',fechaHoy,'v1.0'][i],IX+i*cW2+3,HY+20);
     });
-    var compW=LOGO_W+TITLE_W+cellW*2;
-    fillStroke(ML,HY+ROW1H,compW,ROW2H,[248,249,252]);
-    setF('normal',7,C_LTXT);
-    doc.text('Grupo Proyectos Multiples de Construccion S.A. de C.V.',ML+LOGO_W+4,HY+ROW1H+11);
-    var EX=ML+compW;
-    fillStroke(EX,HY+ROW1H,cellW,ROW2H,C_LBL);
-    setF('bold',6.5,C_LTXT); doc.text('Generado:',EX+3,HY+ROW1H+7);
-    setF('normal',7,C_TXT); doc.text(fechaHoy,EX+3,HY+ROW1H+15);
+    var cW3=IW/3;
+    fS(ML,HY+R1,LW+TW+cW3*2,R2,[248,249,252]);
+    setF('normal',6.5,C_LTXT);
+    doc.text('Grupo Proyectos Multiples de Construccion S.A. de C.V.',ML+LW+4,HY+R1+11);
+    var EX=ML+LW+TW+cW3*2;
+    fS(EX,HY+R1,cW3,R2,C_LBL);
+    setF('bold',6,C_LTXT); doc.text('Generado:',EX+3,HY+R1+6);
+    setF('normal',7,C_TXT); doc.text(fechaHoy,EX+3,HY+R1+14);
   }
 
-  drawHeader();
+  // ── Collect data ─────────────────────────────────────
+  var histData = (typeof _estadoAllRows!=='undefined'&&_estadoAllRows.length)
+    ? _estadoAllRows : [];
+  var catData  = (typeof _catalogoItems!=='undefined'&&_catalogoItems.length)
+    ? _catalogoItems
+    : (typeof _gestionCatItems!=='undefined'&&_gestionCatItems.length?_gestionCatItems:[]);
+  var margen   = typeof _catalogoMargen!=='undefined'?_catalogoMargen:0.35;
+
+  // ════════════════════════════════════════════════════
+  // PÁGINA 1 — MÓDULO 1: Historial
+  // ════════════════════════════════════════════════════
+  drawHeader('Módulo 1 — Historial');
   var y=MT+50;
 
-  // ══════════════════════════════════════════════════════
-  // MÓDULO 1 — HISTORIAL DE PROPUESTAS
-  // ══════════════════════════════════════════════════════
-  y=sectionHdr('MÓDULO 1 — Historial de propuestas',y);
+  y=secHdr('MÓDULO 1 — HISTORIAL DE PROPUESTAS',y);
 
-  // Column definitions for landscape
-  var RH=18; // row height
-  var COL={
-    cod:ML,      codW:85,
-    cli:0,       cliW:90,
-    proy:0,      proyW:110,
-    total:0,     totalW:60,
-    fecha:0,     fechaW:54,
-    vers:0,      versW:30,
-    estado:0,    estadoW:68,
-    resultado:0, resultadoW:62,
-    monto:0,     montoW:62,
-    resp:0,      respW:75,
-  };
-  // Calculate x positions
-  COL.cli     = COL.cod+COL.codW;
-  COL.proy    = COL.cli+COL.cliW;
-  COL.total   = COL.proy+COL.proyW;
-  COL.fecha   = COL.total+COL.totalW;
-  COL.vers    = COL.fecha+COL.fechaW;
-  COL.estado  = COL.vers+COL.versW;
-  COL.resultado=COL.estado+COL.estadoW;
-  COL.monto   = COL.resultado+COL.resultadoW;
-  COL.resp    = COL.monto+COL.montoW;
+  var RH=16;
+  // Columns: Código(85) Cliente(80) Proyecto(100) Total(55) Fecha(50) Estado(65) Resultado(65) Resp(48) = 548
+  var C1={cod:ML,codW:85, cli:0,cliW:80, proy:0,proyW:100,
+          tot:0,totW:55, fec:0,fecW:50, est:0,estW:65,
+          res:0,resW:65, resp:0,respW:48};
+  C1.cli=C1.cod+C1.codW; C1.proy=C1.cli+C1.cliW; C1.tot=C1.proy+C1.proyW;
+  C1.fec=C1.tot+C1.totW; C1.est=C1.fec+C1.fecW; C1.res=C1.est+C1.estW;
+  C1.resp=C1.res+C1.resW;
 
-  // Header row
-  var hdrRH = 20;
-  var hdrs=[
-    ['CÓDIGO',COL.cod,COL.codW],['CLIENTE',COL.cli,COL.cliW],
-    ['PROYECTO',COL.proy,COL.proyW],['TOTAL',COL.total,COL.totalW],
-    ['FECHA GUARD.',COL.fecha,COL.fechaW],['VER.',COL.vers,COL.versW],
-    ['ESTADO',COL.estado,COL.estadoW],['RESULTADO',COL.resultado,COL.resultadoW],
-    ['MONTO ADJ.',COL.monto,COL.montoW],['RESPONSABLE',COL.resp,COL.respW]
-  ];
-  hdrs.forEach(function(h){
-    cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center');
-  });
-  y+=hdrRH;
+  var h1=[['CÓDIGO',C1.cod,C1.codW],['CLIENTE',C1.cli,C1.cliW],
+          ['PROYECTO',C1.proy,C1.proyW],['TOTAL',C1.tot,C1.totW],
+          ['FECHA',C1.fec,C1.fecW],['ESTADO',C1.est,C1.estW],
+          ['RESULTADO',C1.res,C1.resW],['RESPONSABLE',C1.resp,C1.respW]];
+  var HRH=17;
+  h1.forEach(function(h){cell(h[0],h[1],y,h[2],HRH,C_DARK,true,'center');}); y+=HRH;
 
-  // Data rows from _panelRows if available, else try all rows
-  var dataRows = [];
-  if(typeof _estadoAllRows !== 'undefined' && _estadoAllRows.length) {
-    dataRows = _estadoAllRows;
-  }
-
-  if(!dataRows.length){
-    cell('No hay datos de Historial cargados. Abre "Estado de ofertas" primero.',ML,y,CW,RH*2,C_WHITE);
-    y+=RH*2;
+  if(!histData.length){
+    cell('Sin datos. Abre "Estado de ofertas" primero.',ML,y,CW,RH*2,C_WHITE); y+=RH*2;
   } else {
-    dataRows.forEach(function(r,i){
+    histData.forEach(function(r,i){
       var friD={}; try{friD=JSON.parse(r[14]||'{}');}catch(e){}
-      var bg = i%2===0?C_WHITE:C_ALT;
-      var cols2=[
-        [r[0]||'',COL.cod,COL.codW],
-        [r[1]||'',COL.cli,COL.cliW],
-        [r[2]||friD.proyecto||'',COL.proy,COL.proyW],
-        [r[5]?'$'+parseFloat(r[5]).toFixed(2):'',COL.total,COL.totalW],
-        [fmtFecha(r[17]),COL.fecha,COL.fechaW],
-        [(r[0]||'').replace(/^.*-(V\d+)$/,'$1')||'V1',COL.vers,COL.versW],
-        [r[7]||'',COL.estado,COL.estadoW],
-        [r[18]||'Pendiente',COL.resultado,COL.resultadoW],
-        [r[19]?'$'+r[19]:'',COL.monto,COL.montoW],
-        [friD.recibidoPor||'',COL.resp,COL.respW]
-      ];
-      cols2.forEach(function(c){ cell(c[0],c[1],y,c[2],RH,bg); });
+      y=checkY(y,RH);
+      if(y===MT+6){ h1.forEach(function(h){cell(h[0],h[1],y,h[2],HRH,C_DARK,true,'center');}); y+=HRH; }
+      var bg=i%2===0?C_WHITE:C_ALT;
+      var resBg=r[18]==='Adjudicada'?C_GREEN:r[18]==='No adjudicada'?[255,235,235]:bg;
+      [
+        [r[0]||'',C1.cod,C1.codW,bg],
+        [r[1]||'',C1.cli,C1.cliW,bg],
+        [r[2]||friD.proyecto||'',C1.proy,C1.proyW,bg],
+        [r[5]?'$'+parseFloat(r[5]).toFixed(2):'',C1.tot,C1.totW,bg],
+        [fmtFecha(r[17]),C1.fec,C1.fecW,bg],
+        [r[7]||'',C1.est,C1.estW,bg],
+        [r[18]||'Pendiente',C1.res,C1.resW,resBg],
+        [friD.recibidoPor||'',C1.resp,C1.respW,bg]
+      ].forEach(function(c){cell(c[0],c[1],y,c[2],RH,c[3]);});
       y+=RH;
-      if(y > PH-60) { // new page
-        doc.addPage();
-        fillRect(0,0,PW,5,C_RED);
-        y=MT+10;
-        hdrs.forEach(function(h){ cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center'); });
-        y+=hdrRH;
-      }
     });
   }
 
-  // ══════════════════════════════════════════════════════
-  // MÓDULO 2 — CATÁLOGO DE COSTOS UNITARIOS
-  // ══════════════════════════════════════════════════════
-  // New page for module 2
-  doc.addPage();
-  fillRect(0,0,PW,5,C_RED);
-  drawHeader();
+  // Lecciones aprendidas summary
+  y=checkY(y,20);
+  y+=4;
+  y=modHdr('Lecciones aprendidas registradas',y);
+  var hayLecciones=false;
+  histData.forEach(function(r){
+    try{
+      var lec=JSON.parse(r[22]||'[]');
+      if(lec.length){
+        hayLecciones=true;
+        var codigo=r[0]||'';
+        var res2=r[18]||'Pendiente';
+        lec.forEach(function(l){
+          y=checkY(y,14);
+          fS(ML,y,CW,14,C_ALT);
+          setF('bold',7,C_LTXT); doc.text(codigo+' ['+res2+']',ML+4,y+10);
+          setF('normal',7,C_TXT);
+          var lines=doc.splitTextToSize('📌 '+l,CW-100);
+          doc.text(lines,ML+90,y+10,{maxWidth:CW-94});
+          y+=14;
+        });
+      }
+    }catch(e){}
+  });
+  if(!hayLecciones){
+    fS(ML,y,CW,14,C_ALT);
+    setF('normal',7,[150,150,150]); doc.text('Sin lecciones aprendidas registradas aún.',ML+4,y+10);
+    y+=14;
+  }
+
+  // ════════════════════════════════════════════════════
+  // PÁGINA 2 — MÓDULO 2: Catálogo + Módulo 3: Proveedores
+  // ════════════════════════════════════════════════════
+  y=newPage();
+  drawHeader('Módulos 2 y 3 — Catálogo y Proveedores');
   y=MT+50;
 
-  y=sectionHdr('MÓDULO 2 — Catálogo de costos unitarios',y);
+  y=secHdr('MÓDULO 2 — CATÁLOGO DE PARTIDAS Y COSTOS UNITARIOS',y);
 
-  var C2={
-    desc:ML,  descW:220,
-    unit:0,   unitW:45,
-    costo:0,  costoW:65,
-    cat:0,    catW:90,
-    prov:0,   provW:130,
-    notas:0,  notasW:0,
-  };
-  C2.unit  = C2.desc+C2.descW;
-  C2.costo = C2.unit+C2.unitW;
-  C2.cat   = C2.costo+C2.costoW;
-  C2.prov  = C2.cat+C2.catW;
-  C2.notas = C2.prov+C2.provW;
-  C2.notasW= ML+CW-C2.notas;
+  // Columns: Desc(200) Unidad(40) CostoBase(60) PrecioVenta(65) Categoría(85) Proveedor(98)=548
+  var C2={desc:ML,descW:200, unit:0,unitW:40, cost:0,costW:60,
+          pvta:0,pvtaW:65, cat:0,catW:85, prov:0,provW:98};
+  C2.unit=C2.desc+C2.descW; C2.cost=C2.unit+C2.unitW; C2.pvta=C2.cost+C2.costW;
+  C2.cat=C2.pvta+C2.pvtaW; C2.prov=C2.cat+C2.catW;
 
-  var hdrs2=[
-    ['DESCRIPCIÓN',C2.desc,C2.descW],['UNIDAD',C2.unit,C2.unitW],
-    ['COSTO UNIT.',C2.costo,C2.costoW],['CATEGORÍA',C2.cat,C2.catW],
-    ['PROVEEDOR',C2.prov,C2.provW],['NOTAS',C2.notas,C2.notasW]
-  ];
-  hdrs2.forEach(function(h){ cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center'); });
-  y+=hdrRH;
-
-  var catData = typeof _catalogoItems!=='undefined'&&_catalogoItems.length
-    ? _catalogoItems
-    : (typeof _gestionCatItems!=='undefined'&&_gestionCatItems.length ? _gestionCatItems : []);
+  var h2=[['DESCRIPCIÓN',C2.desc,C2.descW],['UNID.',C2.unit,C2.unitW],
+          ['COSTO BASE',C2.cost,C2.costW],['PRECIO VENTA',C2.pvta,C2.pvtaW],
+          ['CATEGORÍA',C2.cat,C2.catW],['PROVEEDOR',C2.prov,C2.provW]];
+  h2.forEach(function(h){cell(h[0],h[1],y,h[2],HRH,C_DARK,true,'center');}); y+=HRH;
 
   if(!catData.length){
-    cell('No hay ítems en el catálogo cargados. Abre "Catálogo" primero.',ML,y,CW,RH*2,C_WHITE);
-    y+=RH*2;
+    cell('Sin datos. Abre "Catálogo" primero.',ML,y,CW,RH*2,C_WHITE); y+=RH*2;
   } else {
-    catData.forEach(function(r,i){
-      var bg=i%2===0?C_WHITE:C_ALT;
-      var margen=typeof _catalogoMargen!=='undefined'?_catalogoMargen:0.35;
-      var costo=parseFloat(r[3]||0);
-      var precioV=costo*(1+margen);
-      [
-        [r[1]||'',C2.desc,C2.descW],
-        [r[2]||'',C2.unit,C2.unitW],
-        ['$'+costo.toFixed(2)+' / $'+precioV.toFixed(2),C2.costo,C2.costoW],
-        [r[5]||'',C2.cat,C2.catW],
-        [r[4]||'',C2.prov,C2.provW],
-        [r[6]||'',C2.notas,C2.notasW]
-      ].forEach(function(c){ cell(c[0],c[1],y,c[2],RH,bg); });
-      y+=RH;
-      if(y>PH-50){
-        doc.addPage();
-        fillRect(0,0,PW,5,C_RED);
-        y=MT+10;
-        hdrs2.forEach(function(h){ cell(h[0],h[1],y,h[2],hdrRH,C_DARK,true,'center'); });
-        y+=hdrRH;
-      }
+    // Group by category
+    var cats={};
+    catData.forEach(function(r){ var c=r[5]||'Sin categoría'; if(!cats[c])cats[c]=[]; cats[c].push(r); });
+    Object.keys(cats).sort().forEach(function(catName){
+      y=checkY(y,13+RH);
+      fR(ML,y,CW,13,C_LBL); setBd(); doc.rect(ML,y,CW,13,'S');
+      setF('bold',7.5,C_LTXT); doc.text(catName.toUpperCase(),ML+4,y+9.5); y+=13;
+      cats[catName].forEach(function(r,i){
+        y=checkY(y,RH);
+        if(y===MT+6){ h2.forEach(function(h){cell(h[0],h[1],y,h[2],HRH,C_DARK,true,'center');}); y+=HRH; }
+        var bg=i%2===0?C_WHITE:C_ALT;
+        var costo=parseFloat(r[3]||0);
+        var pvta2=costo*(1+margen);
+        [
+          [r[1]||'',C2.desc,C2.descW,bg],
+          [r[2]||'',C2.unit,C2.unitW,bg],
+          ['$'+costo.toFixed(2),C2.cost,C2.costW,bg],
+          ['$'+pvta2.toFixed(2),C2.pvta,C2.pvtaW,bg],
+          [r[5]||'',C2.cat,C2.catW,bg],
+          [r[4]||'',C2.prov,C2.provW,bg]
+        ].forEach(function(c){cell(c[0],c[1],y,c[2],RH,c[3]);});
+        y+=RH;
+      });
     });
   }
 
-  // ── Footer ──────────────────────────────────────────
-  var footY=PH-30;
-  fillRect(0,footY-4,PW,34,[255,255,255]);
-  fillStroke(ML,footY,CW,16,C_FOOT);
+  // MÓDULO 3 — Proveedores
+  y=checkY(y,30); y+=6;
+  y=secHdr('MÓDULO 3 — PROVEEDORES (extraídos del catálogo)',y);
+
+  // Extract unique providers with their categories
+  var provMap={};
+  catData.forEach(function(r){
+    var p=r[4]||'Sin proveedor';
+    if(!provMap[p]) provMap[p]={categorias:new Set(),items:0};
+    provMap[p].categorias.add(r[5]||'Sin categoría');
+    provMap[p].items++;
+  });
+
+  var CP={prov:ML,provW:180, cats:0,catsW:220, items:0,itemsW:50, notas:0,notasW:98};
+  CP.cats=CP.prov+CP.provW; CP.items=CP.cats+CP.catsW; CP.notas=CP.items+CP.itemsW;
+
+  var h3=[['PROVEEDOR',CP.prov,CP.provW],['CATEGORÍAS QUE SUMINISTRA',CP.cats,CP.catsW],
+          ['ÍTEMS',CP.items,CP.itemsW],['NOTAS',CP.notas,CP.notasW]];
+  h3.forEach(function(h){cell(h[0],h[1],y,h[2],HRH,C_DARK,true,'center');}); y+=HRH;
+
+  Object.keys(provMap).sort().forEach(function(pNom,i){
+    y=checkY(y,RH);
+    var bg=i%2===0?C_WHITE:C_ALT;
+    var cats2=Array.from(provMap[pNom].categorias).join(', ');
+    [
+      [pNom,CP.prov,CP.provW,bg],
+      [cats2,CP.cats,CP.catsW,bg],
+      [String(provMap[pNom].items),CP.items,CP.itemsW,bg],
+      ['',CP.notas,CP.notasW,bg]
+    ].forEach(function(c){cell(c[0],c[1],y,c[2],RH,c[3]);});
+    y+=RH;
+  });
+
+  // ════════════════════════════════════════════════════
+  // PÁGINA 3 — MÓDULO 4: Indicadores
+  // ════════════════════════════════════════════════════
+  y=newPage();
+  drawHeader('Módulo 4 — Indicadores de seguimiento');
+  y=MT+50;
+  y=secHdr('MÓDULO 4 — INDICADORES DE SEGUIMIENTO',y);
+
+  // Calculate indicators from histData
+  var total     = histData.length;
+  var enviadas  = histData.filter(function(r){return r[7]==='Enviada al cliente';}).length;
+  var adj       = histData.filter(function(r){return r[18]==='Adjudicada';}).length;
+  var noAdj     = histData.filter(function(r){return r[18]==='No adjudicada';}).length;
+  var pend      = histData.filter(function(r){return r[18]==='Pendiente'||!r[18];}).length;
+  var montoTotal= histData.reduce(function(s,r){return s+parseFloat(r[5]||0);},0);
+  var montoAdj  = histData.reduce(function(s,r){return s+parseFloat(r[19]||0);},0);
+  var tasaAdj   = enviadas>0?Math.round(adj/enviadas*100):0;
+  // Avg versions per base code
+  var baseCodes={};
+  histData.forEach(function(r){ var b=(r[0]||'').replace(/-V\d+$/,'');
+    if(!baseCodes[b])baseCodes[b]=0; baseCodes[b]++; });
+  var baseCount=Object.keys(baseCodes).length;
+  var avgVers=baseCount>0?(total/baseCount).toFixed(1):'—';
+
+  // Indicator cards
+  var indics=[
+    {label:'Total de propuestas',   value:String(total),          nota:'Versiones registradas'},
+    {label:'Propuestas únicas',     value:String(baseCount),       nota:'Códigos base distintos'},
+    {label:'Enviadas al cliente',   value:String(enviadas),        nota:'Estado: Enviada al cliente'},
+    {label:'Adjudicadas',           value:String(adj),             nota:'Resultado: Adjudicada'},
+    {label:'No adjudicadas',        value:String(noAdj),           nota:'Resultado: No adjudicada'},
+    {label:'Pendientes',            value:String(pend),            nota:'Sin resultado final'},
+    {label:'Tasa de adjudicación',  value:tasaAdj+'%',            nota:'Adjudicadas / Enviadas'},
+    {label:'Monto total cotizado',  value:'$'+fmtMoney(montoTotal).replace('$',''), nota:'Suma de totales'},
+    {label:'Monto adjudicado',      value:'$'+fmtMoney(montoAdj).replace('$',''),  nota:'Suma montos adjudicados'},
+    {label:'Promedio versiones',    value:String(avgVers),         nota:'Versiones por propuesta'},
+    {label:'Ítems en catálogo',     value:String(catData.length),  nota:'Partidas disponibles'},
+    {label:'Proveedores registrados',value:String(Object.keys(provMap).length),nota:'Del catálogo de partidas'},
+  ];
+
+  // Draw 3-column card grid
+  var cardW=(CW-16)/3, cardH=36, cardPad=8;
+  indics.forEach(function(ind,i){
+    var col=i%3, row=Math.floor(i/3);
+    var cx=ML+col*(cardW+8);
+    var cy=y+row*(cardH+6);
+    cy=checkY(cy,cardH);
+    fS(cx,cy,cardW,cardH,C_ALT);
+    // Value big
+    setF('bold',16,C_DARK); doc.text(ind.value,cx+cardW/2,cy+20,{align:'center'});
+    // Label
+    setF('bold',7,C_LTXT); doc.text(ind.label,cx+4,cy+28);
+    // Nota
+    setF('normal',6,[150,150,150]); doc.text(ind.nota,cx+4,cy+cardH-3);
+    // Red left accent
+    fR(cx,cy,3,cardH,C_RED);
+  });
+
+  y+=Math.ceil(indics.length/3)*(cardH+6)+12;
+
+  // Summary table
+  y=checkY(y,20); y+=4;
+  y=modHdr('Resumen por estado actual',y);
+  var estados3=['En elaboración','En revisión','Aprobada','Enviada al cliente'];
+  var est3W=CW/4;
+  estados3.forEach(function(e,i){
+    var cnt=histData.filter(function(r){return r[7]===e;}).length;
+    var estColor={'En elaboración':C_AMBER,'En revisión':[220,235,255],
+                  'Aprobada':C_GREEN,'Enviada al cliente':[235,220,255]}[e]||C_ALT;
+    fS(ML+i*est3W,y,est3W,28,estColor);
+    setF('bold',10,C_DARK); doc.text(String(cnt),ML+i*est3W+est3W/2,y+14,{align:'center'});
+    setF('normal',6.5,C_LTXT); doc.text(e,ML+i*est3W+est3W/2,y+24,{align:'center'});
+  });
+  y+=32;
+
+  // ── Footer (all pages) ───────────────────────────────
+  var footY=PH-32;
+  fR(0,footY-2,PW,34,[255,255,255]);
+  fS(ML,footY,CW,16,C_FOOT);
   setF('italic',6.5,[100,110,130]);
-  doc.text('\u2605  Costos unitarios: costo base / precio venta (con '+Math.round((typeof _catalogoMargen!=='undefined'?_catalogoMargen:0.35)*100)+'% de margen). Actualizar trimestralmente o ante variación >5%.',ML+5,footY+11,{maxWidth:CW-10});
-  fillRect(0,PH-8,PW,8,C_RED);
+  doc.text('\u2605  Catálogo: actualizar trimestralmente o ante variación de precios >5%. Margen aplicado: '+Math.round(margen*100)+'%.',ML+4,footY+11,{maxWidth:CW-8});
+  fR(0,PH-8,PW,8,C_RED);
   setF('normal',6.5,[120,120,120]);
   doc.text('GPMC S.A. de C.V. \u2014 Base de Datos de Propuestas (BBDD) \u2014 Anexo 9',PW/2,PH-2,{align:'center'});
 
   doc.save('GPMC_BBDD_'+new Date().toISOString().slice(0,10)+'.pdf');
-  toast('\u2713 BBDD descargada','ok');
+  toast('\u2713 BBDD descargada — 3 páginas','ok');
 }
+
+
 
 window.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('input[name="tipo-cliente"]').forEach(function(radio){
