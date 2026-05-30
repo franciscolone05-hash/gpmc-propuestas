@@ -507,15 +507,15 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
       <div style="background:#f8f9fb;border-radius:8px;padding:16px;border:1px solid #e8e8e8">
         <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
-            <input type="radio" name="resultado-final" value="Pendiente" id="res-pendiente">
+            <input type="radio" name="resultado-final" value="Pendiente" id="res-pendiente" onchange="toggleLeccionesSection()">
             <span style="color:#888">⏳ Pendiente de respuesta</span>
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
-            <input type="radio" name="resultado-final" value="Adjudicada" id="res-adj">
+            <input type="radio" name="resultado-final" value="Adjudicada" id="res-adj" onchange="toggleLeccionesSection()">
             <span style="color:#27ae60">✓ Adjudicada</span>
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
-            <input type="radio" name="resultado-final" value="No adjudicada" id="res-noadj">
+            <input type="radio" name="resultado-final" value="No adjudicada" id="res-noadj" onchange="toggleLeccionesSection()">
             <span style="color:#c0392b">✗ No adjudicada</span>
           </label>
         </div>
@@ -536,6 +536,21 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
           <textarea id="res-obs" rows="2" placeholder="Observaciones…"
             style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
         </div>
+
+        <!-- Lecciones aprendidas — visible solo si adj o no adj -->
+        <div id="lecciones-section" style="display:none;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">
+            📚 Lecciones aprendidas
+          </div>
+          <div id="lecciones-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <input id="leccion-input" type="text" placeholder="Agregar lección aprendida…"
+              style="flex:1;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px"
+              onkeydown="if(event.key==='Enter'){agregarLeccion();event.preventDefault();}">
+            <button class="btn btn-ghost btn-sm" onclick="agregarLeccion()" style="white-space:nowrap">+ Agregar</button>
+          </div>
+        </div>
+
         <div style="display:flex;justify-content:flex-end">
           <button class="btn btn-red btn-sm" onclick="guardarResultado()">💾 Guardar resultado</button>
         </div>
@@ -613,7 +628,7 @@ input[type=checkbox]{accent-color:var(--red);width:14px;height:14px}
         <div style="display:flex;gap:8px">
           <input id="gcat-notas" placeholder="Notas opcionales" class="field-inp" style="flex:1;padding:7px 9px;background:#2a2a2a;border:1px solid #444;border-radius:6px;color:#fff;font-size:12px">
           <button class="btn btn-red btn-sm" id="gcat-save-btn" onclick="guardarItemCatalogo()">+ Agregar</button>
-          <button class="btn btn-ghost btn-sm" id="gcat-cancel-btn" onclick="cancelarEditCatalogo()" style="display:none">✕ Cancelar</button>
+          <button id="gcat-cancel-btn" onclick="cancelarEditCatalogo()" style="display:none;padding:6px 12px;background:#555;border:1px solid #777;border-radius:6px;color:#fff;font-size:12px;cursor:pointer">✕ Cancelar</button>
         </div>
       </div>
       <!-- List -->
@@ -3395,6 +3410,10 @@ function openPanelOferta(g) {
   document.getElementById('res-monto').value = last[19]||'';
   document.getElementById('res-fecha').value  = last[20]||'';
   document.getElementById('res-obs').value    = last[21]||'';
+  // Load lecciones from col V (index 22)
+  try { _lecciones = JSON.parse(last[22]||'[]'); } catch(e){ _lecciones=[]; }
+  renderLecciones();
+  toggleLeccionesSection();
 
   renderPanelVersiones(g.rows);
   document.getElementById('panel-oferta').style.display = 'block';
@@ -3519,7 +3538,7 @@ async function guardarResultado() {
     }
     var sheetRow2 = arrIdx2 + 1; // 1-based
     if(arrIdx2 >= 0) {
-      await sheetsUpdate('Historial','S'+sheetRow2+':V'+sheetRow2,[[resultado,monto,fecha,obs]]);
+      await sheetsUpdate('Historial','S'+sheetRow2+':W'+sheetRow2,[[resultado,monto,fecha,obs,JSON.stringify(_lecciones)]]);
       // Update local cache
       _panelRows[_panelRows.length-1][18] = resultado;
       _panelRows[_panelRows.length-1][19] = monto;
@@ -4015,6 +4034,50 @@ async function eliminarItemCatalogo(idx2) {
     loadGestionCatalogo();
     _catalogoItems=[];
   } catch(e){ toast('⚠ Error: '+e.message,'warn'); }
+}
+
+
+// ── LECCIONES APRENDIDAS ──────────────────────────────
+var _lecciones = [];
+
+function toggleLeccionesSection() {
+  var res = (document.querySelector('input[name="resultado-final"]:checked')||{}).value||'';
+  var sec = document.getElementById('lecciones-section');
+  if(sec) sec.style.display = (res==='Adjudicada'||res==='No adjudicada') ? '' : 'none';
+}
+
+function renderLecciones() {
+  var list = document.getElementById('lecciones-list');
+  if(!list) return;
+  list.innerHTML = '';
+  if(!_lecciones.length) {
+    list.innerHTML = '<div style="font-size:12px;color:#aaa;font-style:italic;padding:4px 0">Sin lecciones aprendidas aún.</div>';
+    return;
+  }
+  _lecciones.forEach(function(txt, i) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:flex-start;gap:8px;background:#f8f9fb;border-radius:6px;padding:8px 10px;border:1px solid #e8e8e8';
+    row.innerHTML =
+      '<span style="color:#3498db;font-size:13px;margin-top:1px">📌</span>' +
+      '<span style="flex:1;font-size:13px;color:#333">' + esc(txt) + '</span>' +
+      '<button onclick="eliminarLeccion('+i+')" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:14px;padding:0;line-height:1" title="Eliminar">✕</button>';
+    list.appendChild(row);
+  });
+}
+
+function agregarLeccion() {
+  var input = document.getElementById('leccion-input');
+  var txt = (input.value||'').trim();
+  if(!txt) return;
+  _lecciones.push(txt);
+  input.value = '';
+  renderLecciones();
+  input.focus();
+}
+
+function eliminarLeccion(i) {
+  _lecciones.splice(i, 1);
+  renderLecciones();
 }
 
 window.addEventListener('DOMContentLoaded', function() {
