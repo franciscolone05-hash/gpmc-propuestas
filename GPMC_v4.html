@@ -3545,6 +3545,10 @@ async function guardarResultado() {
       _panelRows[_panelRows.length-1][19] = monto;
       _panelRows[_panelRows.length-1][20] = fecha;
       _panelRows[_panelRows.length-1][21] = obs;
+      _panelRows[_panelRows.length-1][22] = JSON.stringify(_lecciones);
+      // Also update _estadoAllRows cache
+      var lastCode=(_panelRows[_panelRows.length-1][0]||'').trim();
+      _estadoAllRows.forEach(function(r){if((r[0]||'').trim()===lastCode){r[18]=resultado;r[19]=monto;r[20]=fecha;r[21]=obs;r[22]=JSON.stringify(_lecciones);}});
       toast('✓ Resultado guardado: '+resultado,'ok');
     }
   } catch(e) {
@@ -4168,11 +4172,11 @@ async function generarBBDD() {
 
   y=secHdr('MÓDULO 1 — HISTORIAL DE PROPUESTAS',y);
 
-  var RH=16;
-  // Columns: Código(85) Cliente(80) Proyecto(100) Total(55) Fecha(50) Estado(65) Resultado(65) Resp(48) = 548
-  var C1={cod:ML,codW:85, cli:0,cliW:80, proy:0,proyW:100,
-          tot:0,totW:55, fec:0,fecW:50, est:0,estW:65,
-          res:0,resW:65, resp:0,respW:48};
+  var RH=18;
+  // Columns: Código Cliente(80) Proyecto(100) Total(55) Fecha(50) Estado(65) Resultado(65) Resp(48) = 548
+  var C1={cod:ML,codW:80, cli:0,cliW:72, proy:0,proyW:92,
+          tot:0,totW:52, fec:0,fecW:46, est:0,estW:58,
+          res:0,resW:58, resp:0,respW:90};
   C1.cli=C1.cod+C1.codW; C1.proy=C1.cli+C1.cliW; C1.tot=C1.proy+C1.proyW;
   C1.fec=C1.tot+C1.totW; C1.est=C1.fec+C1.fecW; C1.res=C1.est+C1.estW;
   C1.resp=C1.res+C1.resW;
