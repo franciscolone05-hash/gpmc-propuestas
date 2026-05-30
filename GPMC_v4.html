@@ -3411,10 +3411,12 @@ function openPanelOferta(g) {
   document.getElementById('res-monto').value = last[19]||'';
   document.getElementById('res-fecha').value  = last[20]||'';
   document.getElementById('res-obs').value    = last[21]||'';
-  // Load lecciones from col V (index 22)
+  // Load lecciones (col W = index 22)
   try { _lecciones = JSON.parse(last[22]||'[]'); } catch(e){ _lecciones=[]; }
   renderLecciones();
-  toggleLeccionesSection();
+  // Show lecciones section if resultado is adj or no-adj
+  var secL = document.getElementById('lecciones-section');
+  if(secL) secL.style.display = (res==='Adjudicada'||res==='No adjudicada') ? '' : 'none';
 
   renderPanelVersiones(g.rows);
   document.getElementById('panel-oferta').style.display = 'block';
@@ -3554,7 +3556,7 @@ async function guardarResultado() {
     var r2=await sheetsUpdate('Historial','T'+foundRow+':T'+foundRow,[[monto]]);
     var r3=await sheetsUpdate('Historial','U'+foundRow+':U'+foundRow,[[fecha]]);
     var r4=await sheetsUpdate('Historial','V'+foundRow+':V'+foundRow,[[obs]]);
-    console.log('[GPMC] writing W lecciones count='+_lecciones.length);
+    console.log('[GPMC] _lecciones=',JSON.stringify(_lecciones),'lecJSON=',lecJSON);
     var r5=await sheetsUpdate('Historial','W'+foundRow+':W'+foundRow,[[lecJSON]]);
     console.log('[GPMC] W done',r5.error||'ok',r5);
 
