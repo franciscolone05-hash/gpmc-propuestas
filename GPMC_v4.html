@@ -4176,12 +4176,68 @@ async function generarBBDD() {
   }
 
   // ── Collect data ─────────────────────────────────────
-  var histData = (typeof _estadoAllRows!=='undefined'&&_estadoAllRows.length)
-    ? _estadoAllRows : [];
-  var catData  = (typeof _catalogoItems!=='undefined'&&_catalogoItems.length)
-    ? _catalogoItems
-    : (typeof _gestionCatItems!=='undefined'&&_gestionCatItems.length?_gestionCatItems:[]);
-  var margen   = typeof _catalogoMargen!=='undefined'?_catalogoMargen:0.35;
+  // Load data directly from Sheets if not cached
+  toast('⏳ Cargando datos para BBDD…','');
+
+  if(!_estadoAllRows||!_estadoAllRows.length) {
+    try {
+      var hdata = await sheetsRead('Historial','A2:W500');
+      _estadoAllRows = (hdata.values||[]).filter(function(r){
+        var c=(r[0]||'').toString().trim();
+        return c && /GPMC/i.test(c);
+      });
+    } catch(e){ console.log('historial load err:',e); }
+  }
+
+  if(!_catalogoItems||!_catalogoItems.length) {
+    try {
+      var cdata = await sheetsRead('Catalogo','A2:G500');
+      _catalogoItems = (cdata.values||[]).filter(function(r){
+        var d=(r[1]||'').toString().trim();
+        return d && d.toLowerCase()!=='descripcion' && d.toLowerCase()!=='descripción';
+      });
+      await loadConfiguracion();
+    } catch(e){ console.log('catalogo load err:',e); }
+  }
+
+  // Filter to current panel offer only
+  var baseCode = _panelBaseCode||'';
+  var histData = (_estadoAllRows||[]).filter(function(r){
+    return baseCode && (r[0]||'').replace(/-V\d+$/,'')===baseCode;
+  });
+  if(!histData.length) histData = _panelRows||[];
+
+  // Extract unique items used across all versions of this offer
+  var usedDescs = {};
+  histData.forEach(function(r){
+    try {
+      var items = JSON.parse(r[8]||'[]');
+      items.forEach(function(it){
+        if(it.type==='item' && it.desc && it.desc.trim()) {
+          usedDescs[it.desc.trim()] = {
+            desc:it.desc, unit:it.unit||'', price:parseFloat(it.price||0)
+          };
+        }
+      });
+    } catch(e){}
+  });
+
+  // Match used items against catalog to get proveedor/categoria
+  var allCatItems = _catalogoItems.length ? _catalogoItems
+    : (_gestionCatItems&&_gestionCatItems.length?_gestionCatItems:[]);
+
+  // Build catData: items actually used, enriched with catalog data if found
+  var catData = Object.values(usedDescs).map(function(it){
+    // Try to find in catalog by description match
+    var match = allCatItems.filter(function(c){
+      return (c[1]||'').toLowerCase().trim()===it.desc.toLowerCase().trim();
+    })[0];
+    if(match) return match; // return full catalog row
+    // Not in catalog — build row from PEP data
+    return ['',it.desc,it.unit,it.price,'','Sin categoría',''];
+  });
+
+  var margen = typeof _catalogoMargen!=='undefined'?_catalogoMargen:0.35;
 
   // ════════════════════════════════════════════════════
   // PÁGINA 1 — MÓDULO 1: Historial
@@ -4351,40 +4407,43 @@ async function generarBBDD() {
   // PÁGINA 3 — MÓDULO 4: Indicadores
   // ════════════════════════════════════════════════════
   y=newPage();
-  drawHeader('Módulo 4 — Indicadores de seguimiento');
+  drawHeader('Módulo 4 — Indicadores');
   y=MT+50;
-  y=secHdr('MÓDULO 4 — INDICADORES DE SEGUIMIENTO',y);
+  y=secHdr('MODULO 4 — INDICADORES DE SEGUIMIENTO',y);
 
   // Calculate indicators from histData
-  var total     = histData.length;
+  // Indicators for this specific offer
+  var total     = histData.length; // = number of versions
   var enviadas  = histData.filter(function(r){return r[7]==='Enviada al cliente';}).length;
   var adj       = histData.filter(function(r){return r[18]==='Adjudicada';}).length;
   var noAdj     = histData.filter(function(r){return r[18]==='No adjudicada';}).length;
-  var pend      = histData.filter(function(r){return r[18]==='Pendiente'||!r[18];}).length;
+  var pend      = histData.filter(function(r){return (r[18]||'Pendiente')==='Pendiente';}).length;
   var montoTotal= histData.reduce(function(s,r){return s+parseFloat(r[5]||0);},0);
-  var montoAdj  = histData.reduce(function(s,r){return s+parseFloat(r[19]||0);},0);
-  var tasaAdj   = enviadas>0?Math.round(adj/enviadas*100):0;
-  // Avg versions per base code
-  var baseCodes={};
-  histData.forEach(function(r){ var b=(r[0]||'').replace(/-V\d+$/,'');
-    if(!baseCodes[b])baseCodes[b]=0; baseCodes[b]++; });
-  var baseCount=Object.keys(baseCodes).length;
-  var avgVers=baseCount>0?(total/baseCount).toFixed(1):'—';
+  var montoAdj  = histData.reduce(function(s,r){
+    var m=parseFloat((r[19]||'').toString().replace(/[^0-9.]/g,''));
+    return s+(isNaN(m)?0:m);
+  },0);
+  var conResultado = adj + noAdj;
+  var tasaAdj   = conResultado>0?Math.round(adj/conResultado*100):0;
+  var baseCount = 1; // single offer
+  var avgVers   = total; // versions of this offer
 
   // Indicator cards
+  var lastV = histData[histData.length-1]||[];
+  var friLast={}; try{friLast=JSON.parse(lastV[14]||'{}');}catch(e){}
   var indics=[
-    {label:'Total de propuestas',   value:String(total),          nota:'Versiones registradas'},
-    {label:'Propuestas únicas',     value:String(baseCount),       nota:'Códigos base distintos'},
-    {label:'Enviadas al cliente',   value:String(enviadas),        nota:'Estado: Enviada al cliente'},
-    {label:'Adjudicadas',           value:String(adj),             nota:'Resultado: Adjudicada'},
-    {label:'No adjudicadas',        value:String(noAdj),           nota:'Resultado: No adjudicada'},
-    {label:'Pendientes',            value:String(pend),            nota:'Sin resultado final'},
-    {label:'Tasa de adjudicación',  value:tasaAdj+'%',            nota:'Adjudicadas / Enviadas'},
-    {label:'Monto total cotizado',  value:'$'+fmtMoney(montoTotal).replace('$',''), nota:'Suma de totales'},
-    {label:'Monto adjudicado',      value:'$'+fmtMoney(montoAdj).replace('$',''),  nota:'Suma montos adjudicados'},
-    {label:'Promedio versiones',    value:String(avgVers),         nota:'Versiones por propuesta'},
-    {label:'Ítems en catálogo',     value:String(catData.length),  nota:'Partidas disponibles'},
-    {label:'Proveedores registrados',value:String(Object.keys(provMap).length),nota:'Del catálogo de partidas'},
+    {label:'Versiones generadas',   value:String(total),           nota:'Total de versiones'},
+    {label:'Estado actual',         value:lastV[7]||'—',           nota:'Última versión'},
+    {label:'Resultado final',       value:(lastV[18]||'Pendiente'),nota:'Adjudicación'},
+    {label:'Monto mayor versión',   value:'$'+fmtMoney(Math.max.apply(null,histData.map(function(r){return parseFloat(r[5]||0);}))).replace('$',''), nota:'Versión con mayor monto'},
+    {label:'Monto adjudicado',      value:montoAdj>0?'$'+fmtMoney(montoAdj).replace('$',''):'—', nota:'Monto confirmado'},
+    {label:'Partidas utilizadas',   value:String(catData.length),  nota:'Ítems en propuesta'},
+    {label:'Proveedores requeridos',value:String(Object.keys(provMap).length), nota:'Del catálogo'},
+    {label:'Cliente',               value:lastV[1]||friLast.cliente||'—', nota:''},
+    {label:'Proyecto',              value:lastV[2]||friLast.proyecto||'—', nota:''},
+    {label:'Responsable',           value:friLast.recibidoPor||'—',nota:'Personal asignado'},
+    {label:'Fecha primera versión', value:fmtFecha((histData[0]||[])[17]),nota:'Inicio'},
+    {label:'Fecha última versión',  value:fmtFecha(lastV[17]),     nota:'Última actualización'},
   ];
 
   // Draw 3-column card grid
@@ -4413,7 +4472,7 @@ async function generarBBDD() {
   var estados3=['En elaboración','En revisión','Aprobada','Enviada al cliente'];
   var est3W=CW/4;
   estados3.forEach(function(e,i){
-    var cnt=histData.filter(function(r){return r[7]===e;}).length;
+    var cnt=histData.filter(function(r){return (r[7]||'')===(e);}).length;
     var estColor={'En elaboración':C_AMBER,'En revisión':[220,235,255],
                   'Aprobada':C_GREEN,'Enviada al cliente':[235,220,255]}[e]||C_ALT;
     fS(ML+i*est3W,y,est3W,28,estColor);
