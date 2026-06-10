@@ -4243,13 +4243,18 @@ async function generarBBDD() {
         var codigo=r[0]||'';
         var res2=r[18]||'Pendiente';
         lec.forEach(function(l){
-          y=checkY(y,14);
-          fS(ML,y,CW,14,C_ALT);
-          setF('bold',7,C_LTXT); doc.text(codigo+' ['+res2+']',ML+4,y+10);
-          setF('normal',7,C_TXT);
-          var lines=doc.splitTextToSize('📌 '+l,CW-100);
-          doc.text(lines,ML+90,y+10,{maxWidth:CW-94});
-          y+=14;
+          // Two-line row: header with code+result, then lesson text
+          var lecLines=doc.splitTextToSize(l,CW-20);
+          var lecH=Math.max(22, lecLines.length*9+10);
+          y=checkY(y,lecH);
+          fS(ML,y,CW,lecH,C_ALT);
+          // Code + result badge on first line
+          setF('bold',6.5,C_LTXT); doc.text(codigo,ML+4,y+8);
+          var badgeColor=res2==='Adjudicada'?[0,120,0]:res2==='No adjudicada'?[150,0,0]:[100,100,100];
+          setF('bold',6.5,badgeColor); doc.text('['+res2+']',ML+4+doc.getTextWidth(codigo)+4,y+8);
+          // Lesson text on second line
+          setF('normal',7.5,C_TXT); doc.text(lecLines,ML+8,y+18,{maxWidth:CW-12});
+          y+=lecH;
         });
       }
     }catch(e){}
